@@ -1,30 +1,38 @@
 const { DataTypes } = require("sequelize")
 
-module.exports= model;
+module.exports = model;
 
 function model(sequelize) {
     const attributes = {
-        token: { type: DataTypes.STRING },
-        expires: { type: DataTypes.DATE },
+        id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+        title: { type: DataTypes.STRING, allowNull: true },
+        firstName: { type: DataTypes.STRING, allowNull: false },
+        lastName: { type: DataTypes.STRING, allowNull: false },
+        email: { type: DataTypes.STRING, allowNull: false, unique: true },
+        passwordHash: { type: DataTypes.STRING, allowNull: false },
+        acceptTerms: { type: DataTypes.BOOLEAN },
+        role: { type: DataTypes.STRING, allowNull: false, defaultValue: 'User' },
+        verificationToken: { type: DataTypes.STRING },
+        verified: { type: DataTypes.DATE },
+        resetToken: { type: DataTypes.STRING },
+        resetTokenExpires: { type: DataTypes.DATE },
+        passwordReset: { type: DataTypes.DATE },
         created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
-        createdByIp: { type: DataTypes.STRING },
-        revoked: { type: DataTypes.DATE },
-        revokedByIp: { type: DataTypes.STRING },
-        replacedByToken: { type: DataTypes.STRING },
-        isExpired: {
+        updated: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+        isVerified: {
             type: DataTypes.VIRTUAL,
-            get() { return Date.now() >= this.expires; }
-        },
-        isActive: {
-            type: DataTypes.VIRTUAL,
-            get() { return !this.revoked && !this.isExpired; }
+            get() { return !!(this.verified || this.passwordReset); }
         }
     };
 
     const options = {
         // disable default timestamp fields (createdAt and updatedAt)
-        timestamps: false
+        timestamps: false,
+        scopes: {
+            // include hash with this scope
+            withHash: { attributes: { include: ['passwordHash'] } }
+        }
     };
 
-    return sequelize.define('refreshToken', attributes, options);
+    return sequelize.define('account', attributes, options);
 }
