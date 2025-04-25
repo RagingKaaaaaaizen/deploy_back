@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize")
+const { DataTypes } = require("sequelize");
 
 module.exports = model;
 
@@ -19,6 +19,11 @@ function model(sequelize) {
         passwordReset: { type: DataTypes.DATE },
         created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
         updated: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+        status: {
+            type: DataTypes.ENUM('active', 'inactive'),
+            allowNull: false,
+            defaultValue: 'active'
+        },
         isVerified: {
             type: DataTypes.VIRTUAL,
             get() { return !!(this.verified || this.passwordReset); }
@@ -26,10 +31,8 @@ function model(sequelize) {
     };
 
     const options = {
-        // disable default timestamp fields (createdAt and updatedAt)
         timestamps: false,
         scopes: {
-            // include hash with this scope
             withHash: { attributes: { include: ['passwordHash'] } }
         }
     };
