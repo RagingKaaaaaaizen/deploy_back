@@ -20,9 +20,9 @@ function model(sequelize) {
         created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
         updated: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
         status: {
-            type: DataTypes.ENUM('active', 'inactive'),
+            type: DataTypes.ENUM('Active', 'Inactive'),
             allowNull: false,
-            defaultValue: 'active'
+            defaultValue: 'Active'
         },
         isVerified: {
             type: DataTypes.VIRTUAL,

@@ -22,7 +22,7 @@ function authorize(roles = []) {
                 }
 
                 // Check if account is active
-                if (account.status !== 'active') {
+                if (account.status !== 'Active') {
                     return res.status(403).json({ message: 'Account is inactive. Please contact support.' });
                 }
 
