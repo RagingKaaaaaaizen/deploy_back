@@ -30,20 +30,20 @@ async function authenticate({ email, password, ipAddress }) {
     const account = await db.Account.scope('withHash').findOne({ where: { email } });
 
     if (!account) {
-        throw 'No account found with this email';
+        throw { message: 'No account found with this email' };
     }
 
     if (!account.isVerified) {
-        throw 'Email is not verified. Please check your inbox.';
+        throw { message: 'Email is not verified. Please check your inbox.' };
     }
 
     if (account.status !== 'Active') {
-        throw 'Account is inactive. Please contact support or admin.';
+        throw { message: 'Account is inactive. Please contact support or admin.' };
     }
 
     const passwordMatch = await bcrypt.compare(password, account.passwordHash);
     if (!passwordMatch) {
-        throw 'Password is incorrect';
+        throw { message: 'Password is incorrect' };
     }
 
     const jwtToken = generateJwtToken(account);
@@ -151,12 +151,12 @@ async function getById(id) {
 
 async function create(params) {
     if (await db.Account.findOne({ where: { email: params.email } })) {
-        throw 'Email "' + params.email + '" is already registered';
+        throw { message: 'Email "' + params.email + '" is already registered' };
     }
 
     const account = new db.Account(params);
     account.verified = Date.now();
-    account.isActive = true;
+    account.status = 'Active';
     account.passwordHash = await hash(params.password);
     await account.save();
 
@@ -167,15 +167,18 @@ async function update(id, params) {
     const account = await getAccount(id);
 
     if (params.email && account.email !== params.email && await db.Account.findOne({ where: { email: params.email } })) {
-        throw 'Email "' + params.email + '" is already taken';
+        throw { message: 'Email "' + params.email + '" is already taken' };
     }
 
     if (params.password) {
         params.passwordHash = await hash(params.password);
     }
 
-    if (typeof params.isActive !== 'undefined') {
-        account.isActive = params.isActive;
+    if (typeof params.status !== 'undefined') {
+        if (params.status !== 'Active' && params.status !== 'Inactive') {
+            throw { message: 'Invalid status value. Must be either Active or Inactive' };
+        }
+        account.status = params.status;
     }
 
     Object.assign(account, params);
@@ -242,8 +245,8 @@ function randomTokenString() {
 }
 
 function basicDetails(account) {
-    const { id, title, firstName, lastName, email, role, created, updated, isVerified, isActive } = account;
-    return { id, title, firstName, lastName, email, role, created, updated, isVerified, isActive };
+    const { id, title, firstName, lastName, email, role, created, updated, isVerified, status } = account;
+    return { id, title, firstName, lastName, email, role, created, updated, isVerified, status };
 }
 
 async function sendVerificationEmail(account, origin) {
