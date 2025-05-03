@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       departmentId: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
       },
       hireDate: {
         type: DataTypes.DATE,
