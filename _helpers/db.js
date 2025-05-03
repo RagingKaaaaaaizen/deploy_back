@@ -1,6 +1,6 @@
 const config = require('config.json');
 const mysql = require('mysql2/promise');
-const { Sequelize } = require('sequelize');
+const { Sequelize, DataTypes } = require('sequelize');
 
 module.exports = db = {};
 
@@ -15,14 +15,23 @@ async function initialize() {
     // connect to db
     const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
 
-    // init models and add them to the exported db object
-    db.Account = require('../accounts/account.model')(sequelize);
-    db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
+  // init models and add them to the exported db object
+db.Account = require('../accounts/account.model')(sequelize);
+db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
+db.Employee = require('../employees/employee.model')(sequelize, DataTypes);
+db.Department = require('../departments/department.model')(sequelize, DataTypes); // ✅ add this
 
-    // define relationships
-    db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
-    db.RefreshToken.belongsTo(db.Account);
+// define relationships
+db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
+db.RefreshToken.belongsTo(db.Account);
+db.Account.hasOne(db.Employee, { foreignKey: 'accountId', as: 'employee' });
+db.Department.hasMany(db.Employee, { foreignKey: 'departmentId', as: 'employees' });
 
     // sync all models with database
     await sequelize.sync({ alter: true });
+
+    // expose sequelize instance to be used throughout the app
+db.sequelize = sequelize;
+db.Sequelize = Sequelize; 
+
 }
