@@ -1,7 +1,20 @@
 const db = require('../_helpers/db');
 
 async function create(params) {
-    return await db.Employee.create(params);
+    // Find the account using the email
+    const account = await db.Account.findOne({ where: { email: params.email } });
+    if (!account) {
+        throw new Error('Account not found with the provided email');
+    }
+
+    // Create the employee with the accountId and email
+    const employee = await db.Employee.create({
+        ...params,
+        accountId: account.id,
+        email: account.email
+    });
+
+    return employee;
 }
 
 async function getAll() {
