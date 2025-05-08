@@ -10,7 +10,6 @@ async function create(params) {
     // Create the employee with the accountId and email
     const employee = await db.Employee.create({
         ...params,
-        accountId: account.id,
         email: account.email
     });
 

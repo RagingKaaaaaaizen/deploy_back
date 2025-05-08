@@ -2,7 +2,7 @@ const db = require('../_helpers/db');
 const Workflow = db.Workflow;
 const Employee = db.Employee;
 
-const validStatuses = ['pending', 'approved', 'disapproved'];
+const validStatuses = ['Pending', 'Approved', 'Rejected'];
 
 async function create(params) {
     const workflow = new Workflow(params);
@@ -14,7 +14,7 @@ async function createOnboarding(params) {
     const workflow = new Workflow({
         ...params,
         type: 'Onboarding',
-        status: 'pending'
+        status: 'Pending'
     });
     await workflow.save();
     return workflow;
@@ -54,7 +54,7 @@ async function update(id, params) {
 
     // Optionally update endDate if status is changing
     if (params.status && validStatuses.includes(params.status)) {
-        workflow.endDate = params.status !== 'pending' ? new Date() : null;
+        workflow.endDate = params.status !== 'Pending' ? new Date() : null;
     }
 
     Object.assign(workflow, params);
@@ -72,7 +72,7 @@ async function updateStatus(id, status, actionBy = null) {
 
     await workflow.update({
         status,
-        endDate: status !== 'pending' ? new Date() : null,
+        endDate: status !== 'Pending' ? new Date() : null,
         actionBy,
         actionDate: new Date()
     });

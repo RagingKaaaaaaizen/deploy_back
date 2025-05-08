@@ -12,6 +12,7 @@ router.put('/:id', authorize(), update);
 router.delete('/:id', authorize(Role.Admin), _delete);
 router.post('/:id/items', authorize(), addItems);
 router.put('/:id/status', authorize(Role.Admin), updateStatus);
+router.get('/employee/:employeeId', authorize(), getByEmployeeId);
 
 async function getAll(req, res, next) {
     try {
@@ -72,6 +73,15 @@ async function updateStatus(req, res, next) {
     try {
         const request = await requestService.updateStatus(req.params.id, req.body.status);
         res.json(request);
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function getByEmployeeId(req, res, next) {
+    try {
+        const requests = await requestService.getByEmployeeId(req.params.employeeId);
+        res.json(requests);
     } catch (err) {
         next(err);
     }

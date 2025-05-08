@@ -10,7 +10,7 @@ router.get('/', authorize(), getAll);
 router.get('/:id', authorize(), getById);
 router.put('/:id', authorize(Role.Admin), update);
 router.delete('/:id', authorize(Role.Admin), _delete);
-router.post('/:id', authorize(Role.Admin), transfer);
+router.post('/:id/transfer', authorize(Role.Admin), transfer);
 
 // Handlers
 async function create(req, res, next) {
