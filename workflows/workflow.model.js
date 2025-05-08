@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false
         },
         status: {
-            type: DataTypes.STRING,
+            type: DataTypes.ENUM('pending', 'approved', 'disapproved'),
             allowNull: false,
             defaultValue: 'pending'
         },
@@ -28,6 +28,14 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.NOW
         },
         endDate: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        actionBy: {
+            type: DataTypes.STRING, 
+            allowNull: true
+        },
+        actionDate: {
             type: DataTypes.DATE,
             allowNull: true
         }

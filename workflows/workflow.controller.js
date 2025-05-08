@@ -14,6 +14,10 @@ router.delete('/:id', authorize(Role.Admin), _delete);
 router.put('/:id/status', authorize(Role.Admin), updateStatus);
 router.post('/onboarding', authorize(Role.Admin), onboarding);
 
+module.exports = router;
+
+// route functions
+
 async function getAll(req, res, next) {
     try {
         const workflows = await workflowService.getAll();
@@ -71,7 +75,9 @@ async function _delete(req, res, next) {
 
 async function updateStatus(req, res, next) {
     try {
-        const workflow = await workflowService.updateStatus(req.params.id, req.body.status);
+        const status = req.body.status;
+        const actionBy = req.user?.email || null;
+        const workflow = await workflowService.updateStatus(req.params.id, status, actionBy);
         res.json(workflow);
     } catch (err) {
         next(err);
@@ -86,5 +92,3 @@ async function onboarding(req, res, next) {
         next(err);
     }
 }
-
-module.exports = router; 
