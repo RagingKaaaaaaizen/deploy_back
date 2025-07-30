@@ -1,4 +1,3 @@
-// Full updated account.service.js with active/inactive support
 const config = require('config.json');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -27,6 +26,9 @@ module.exports = {
 };
 
 async function authenticate({ email, password, ipAddress }) {
+    // Always lowercase emails for consistency
+    email = email.toLowerCase();
+
     const account = await db.Account.scope('withHash').findOne({ where: { email } });
 
     if (!account) {
@@ -57,7 +59,6 @@ async function authenticate({ email, password, ipAddress }) {
     };
 }
 
-
 async function refreshToken({ token, ipAddress }) {
     const refreshToken = await getRefreshToken(token);
     const account = await refreshToken.getAccount();
@@ -86,6 +87,9 @@ async function revokeToken({ token, ipAddress }) {
 }
 
 async function register(params, origin) {
+    // Normalize email to lowercase
+    params.email = params.email.toLowerCase();
+
     if (await db.Account.findOne({ where: { email: params.email } })) {
         return await sendAlreadyRegisteredEmail(params.email, origin);
     }
@@ -104,17 +108,19 @@ async function verifyEmail({ token }) {
     const account = await db.Account.findOne({ where: { verificationToken: token } });
     if (!account) throw 'Verification failed';
 
-    account.verified = Date.now();
+    // Set verified date and clear token
+    account.verified = new Date();
     account.verificationToken = null;
     await account.save();
 }
 
 async function forgotPassword({ email }, origin) {
+    email = email.toLowerCase();
     const account = await db.Account.findOne({ where: { email } });
     if (!account) return;
 
     account.resetToken = randomTokenString();
-    account.resetTokenExpires = new Date(Date.now() + 24*60*60*1000);
+    account.resetTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await account.save();
     await sendPasswordResetEmail(account, origin);
 }
@@ -134,7 +140,7 @@ async function validateResetToken({ token }) {
 async function resetPassword({ token, password }) {
     const account = await validateResetToken({ token });
     account.passwordHash = await hash(password);
-    account.passwordReset = Date.now();
+    account.passwordReset = new Date();
     account.resetToken = null;
     await account.save();
 }
@@ -150,12 +156,14 @@ async function getById(id) {
 }
 
 async function create(params) {
+    params.email = params.email.toLowerCase();
+
     if (await db.Account.findOne({ where: { email: params.email } })) {
         throw { message: 'Email "' + params.email + '" is already registered' };
     }
 
     const account = new db.Account(params);
-    account.verified = Date.now();
+    account.verified = new Date();
     account.status = 'Active';
     account.passwordHash = await hash(params.password);
     await account.save();
@@ -165,6 +173,8 @@ async function create(params) {
 
 async function update(id, params) {
     const account = await getAccount(id);
+
+    if (params.email) params.email = params.email.toLowerCase();
 
     if (params.email && account.email !== params.email && await db.Account.findOne({ where: { email: params.email } })) {
         throw { message: 'Email "' + params.email + '" is already taken' };
@@ -182,7 +192,7 @@ async function update(id, params) {
     }
 
     Object.assign(account, params);
-    account.updated = Date.now();
+    account.updated = new Date();
     await account.save();
 
     return basicDetails(account);
@@ -196,7 +206,7 @@ async function _delete(id) {
 async function activateAccount(id) {
     const account = await getAccount(id);
     account.status = 'Active';
-    account.updated = Date.now();
+    account.updated = new Date();
     await account.save();
     return basicDetails(account);
 }
@@ -204,7 +214,7 @@ async function activateAccount(id) {
 async function deactivateAccount(id) {
     const account = await getAccount(id);
     account.status = 'Inactive';
-    account.updated = Date.now();
+    account.updated = new Date();
     await account.save();
     return basicDetails(account);
 }
@@ -228,14 +238,15 @@ async function hash(password) {
 }
 
 function generateJwtToken(account) {
-    return jwt.sign({ sub: account.id, id: account.id }, config.secret, { expiresIn: '15m' });
+    // include role in JWT payload for quick checks
+    return jwt.sign({ sub: account.id, id: account.id, role: account.role }, config.secret, { expiresIn: '15m' });
 }
 
 function generateRefreshToken(account, ipAddress) {
     return new db.RefreshToken({
         accountId: account.id,
         token: randomTokenString(),
-        expires: new Date(Date.now() + 7*24*60*60*1000),
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdByIp: ipAddress
     });
 }

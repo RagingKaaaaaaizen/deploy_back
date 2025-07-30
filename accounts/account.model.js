@@ -8,7 +8,15 @@ function model(sequelize) {
         title: { type: DataTypes.STRING, allowNull: true },
         firstName: { type: DataTypes.STRING, allowNull: false },
         lastName: { type: DataTypes.STRING, allowNull: false },
-        email: { type: DataTypes.STRING, allowNull: false, unique: true },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true,
+            set(value) {
+                // Always save as lowercase to avoid duplicate case mismatch
+                this.setDataValue('email', value.toLowerCase());
+            }
+        },
         passwordHash: { type: DataTypes.STRING, allowNull: false },
         acceptTerms: { type: DataTypes.BOOLEAN },
         role: { type: DataTypes.STRING, allowNull: false, defaultValue: 'User' },
@@ -34,6 +42,11 @@ function model(sequelize) {
         timestamps: false,
         scopes: {
             withHash: { attributes: { include: ['passwordHash'] } }
+        },
+        hooks: {
+            beforeUpdate: (account) => {
+                account.updated = new Date(); // Auto update timestamp
+            }
         }
     };
 

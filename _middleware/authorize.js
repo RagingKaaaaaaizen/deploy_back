@@ -1,4 +1,5 @@
-const { expressjwt } = require('express-jwt'); 
+const { expressjwt: jwt } = require('express-jwt');
+
 const config = require('../config.json'); 
 const db = require('../_helpers/db');
 
@@ -11,7 +12,7 @@ function authorize(roles = []) {
     }
 
     return [
-        expressjwt({ secret: config.secret, algorithms: ['HS256'] }),
+        jwt({ secret: config.secret, algorithms: ['HS256'] }),
 
         async (req, res, next) => {
     try {

@@ -4,16 +4,16 @@
       "port": 3306,
       "user": "root",
       "password": "1234",
-      "database": "test"
+      "database": "amp"
     },
-    "secret": "{7a229668-5ac7-4343-b02b-9f315eb7ad28}",
+    "secret": "{b0595d80-386b-469d-b0c4-e375aa5ed45f}",
     "emailFrom": "info@node-mysql-signup-verification-api.com",
     "smtpOptions": {
       "host": "smtp.ethereal.email",
       "port": 587,
       "auth": {
-        "user": "verda.labadie72@ethereal.email",
-        "pass": "27eWySBZcj1Wa5YVng"
+        "user": "annie.parker0@ethereal.email",
+        "pass": "fnyCSJGPbHW1hHaPGQ"
       }
     }
   }
