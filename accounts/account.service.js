@@ -1,10 +1,10 @@
-const config = require('config.json');
-const jwt = require('jsonwebtoken');
+const db = require('../_helpers/db');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const config = require('../config.json');
 const { Op } = require('sequelize');
 const sendEmail = require('../_helpers/send-email');
-const db = require('../_helpers/db');
 const Role = require('../_helpers/role');
 
 module.exports = {
@@ -35,7 +35,8 @@ async function authenticate({ email, password, ipAddress }) {
         throw { message: 'No account found with this email' };
     }
 
-    if (!account.isVerified) {
+    // Check if account is verified (use actual verified field, not virtual)
+    if (!account.verified && account.verificationToken) {
         throw { message: 'Email is not verified. Please check your inbox.' };
     }
 
@@ -96,12 +97,31 @@ async function register(params, origin) {
 
     const account = new db.Account(params);
     const isFirstAccount = (await db.Account.count()) === 0;
-    account.role = isFirstAccount ? Role.Admin : Role.User;
-    account.verificationToken = randomTokenString();
+    account.role = isFirstAccount ? Role.SuperAdmin : Role.Viewer;
     account.passwordHash = await hash(params.password);
 
+    if (isFirstAccount) {
+        // First user: bypass verification, set as verified and active
+        account.verified = new Date();
+        account.status = 'Active';
+        account.verificationToken = null;
+        account.acceptTerms = true;
+    } else {
+        // Other users: require email verification
+        account.verificationToken = randomTokenString();
+        account.status = 'Inactive'; // Set as inactive until verified
+    }
+
     await account.save();
-    await sendVerificationEmail(account, origin);
+    
+    if (isFirstAccount) {
+        // First user: no email verification needed
+        return { message: "Registration successful! You are now logged in as SuperAdmin." };
+    } else {
+        // Other users: send verification email
+        await sendVerificationEmail(account, origin);
+        return { message: "Registration successful, please check your email for verification instructions" };
+    }
 }
 
 async function verifyEmail({ token }) {

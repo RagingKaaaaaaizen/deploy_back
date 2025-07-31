@@ -11,10 +11,10 @@ function addStockSchema(req, res, next) {
     const schema = Joi.object({
         itemId: Joi.number().required(),
         quantity: Joi.number().required(),
-        type: Joi.string().valid('ADD', 'DISPOSE').required(), // match model ENUM
         locationId: Joi.number().required(),                   // FOREIGN KEY to StorageLocation
         price: Joi.number().required(),                        // NEW FIELD: price
-        remarks: Joi.string().allow('')
+        remarks: Joi.string().allow(''),
+        disposeId: Joi.number().optional()                     // Optional link to disposal record
     });
     validateRequest(req, next, schema);
 }
@@ -31,10 +31,11 @@ function updateStockSchema(req, res, next) {
 }
 
 // Routes
-router.get('/', authorize(), controller.getLogs);                                   // GET all stock logs
-router.get('/:id', authorize(), controller.getById);                                // GET single stock log
-router.post('/', authorize(Role.Admin), addStockSchema, controller.addStock);      // CREATE stock
-router.put('/:id', authorize(Role.Admin), updateStockSchema, controller.updateStock); // UPDATE stock
-router.delete('/:id', authorize(Role.Admin), controller._delete);                   // DELETE stock
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getLogs);                                   // GET all stock logs
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);                                // GET single stock log
+router.get('/available/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAvailableStock);        // GET available stock for item
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), addStockSchema, controller.addStock);      // CREATE stock
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateStockSchema, controller.updateStock); // UPDATE stock
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller._delete);                   // DELETE stock
 
 module.exports = router;

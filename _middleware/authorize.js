@@ -15,31 +15,34 @@ function authorize(roles = []) {
         jwt({ secret: config.secret, algorithms: ['HS256'] }),
 
         async (req, res, next) => {
-    try {
-        console.log("req.auth:", req.auth); // Log the decoded token
-        const account = await db.Account.findByPk(req.auth.id); 
-        console.log("account:", account);
+            try {
+                console.log('Authorize middleware - req.auth:', req.auth);
+                
+                const account = await db.Account.findByPk(req.auth.id); 
 
-        if (!account) {
-            return res.status(401).json({ message: 'Unauthorized' });
+                if (!account) {
+                    console.log('Account not found for ID:', req.auth.id);
+                    return res.status(401).json({ message: 'Unauthorized' });
+                }
+
+                if (account.status !== 'Active') {
+                    console.log('Account is inactive:', account.email);
+                    return res.status(403).json({ message: 'Account is inactive. Please contact support.' });
+                }
+
+                if (roles.length && !roles.some(role => role === account.role)) {
+                    console.log('User role not authorized:', account.role, 'Required:', roles);
+                    return res.status(401).json({ message: 'Unauthorized' });
+                }
+
+                req.user = account;
+                console.log('User authorized:', account.email, 'Role:', account.role);
+                next();
+            } catch (error) {
+                console.error('Error in authorize middleware:', error);
+                return res.status(500).json({ message: 'Internal Server Error' });
+            }
         }
-
-        if (account.status !== 'Active') {
-            return res.status(403).json({ message: 'Account is inactive. Please contact support.' });
-        }
-
-        if (roles.length && !roles.includes(account.role)) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-
-        req.user = account;
-        next();
-    } catch (error) {
-        console.error("Authorization error:", error); // Log error details
-        return res.status(500).json({ message: 'Internal Server Error' });
-    }
-}
-
     ];
 }
 

@@ -9,7 +9,7 @@ module.exports = {
 };
 
 async function getAll() {
-    return await db.ItemCategory.findAll();
+    return await db.Category.findAll();
 }
 
 async function getById(id) {
@@ -17,10 +17,10 @@ async function getById(id) {
 }
 
 async function create(params) {
-    if (await db.ItemCategory.findOne({ where: { name: params.name } })) {
+    if (await db.Category.findOne({ where: { name: params.name } })) {
         throw `Category "${params.name}" already exists`;
     }
-    const category = await db.ItemCategory.create(params);
+    const category = await db.Category.create(params);
     return category;
 }
 
@@ -29,7 +29,7 @@ async function update(id, params) {
 
     // Prevent duplicate name
     if (params.name && params.name !== category.name &&
-        await db.ItemCategory.findOne({ where: { name: params.name } })) {
+        await db.Category.findOne({ where: { name: params.name } })) {
         throw `Category "${params.name}" already exists`;
     }
 
@@ -45,7 +45,7 @@ async function _delete(id) {
 
 // Helper
 async function getCategory(id) {
-    const category = await db.ItemCategory.findByPk(id);
+    const category = await db.Category.findByPk(id);
     if (!category) throw 'Category not found';
     return category;
 }

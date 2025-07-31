@@ -5,12 +5,12 @@ const authorize = require ('../_middleware/authorize');
 const Role = require ('../_helpers/role');
 const { create, getAll, getById } = require('../accounts/account.service');
 
-router.post('/',authorize(Role.Admin), create);
-router.get('/',authorize(),getAll);
-router.get('/:id', authorize(),getById);
-router.put('/:id',authorize(Role.Admin),update);
-router.delete('/:id',authorize(Role.Admin),_delete);
-router.post('/:id',authorize(Role.Admin),transfer);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), create);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), _delete);
+router.post('/:id', authorize([Role.SuperAdmin, Role.Admin]), transfer);
 
 async function create(req,res,next) {
     try{

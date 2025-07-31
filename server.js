@@ -6,12 +6,8 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const errorHandler = require('./_middleware/error-handler');
 
-// Import route indexes (not controllers)
-const categoryRoutes = require('./category');
-const itemRoutes = require('./items');
-const stockRoutes = require('./stock');
-const brandController = require('./brand/brand.controller');
-const storageLocationRoutes = require('./storage-location');
+// Initialize database
+const db = require('./_helpers/db');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -21,19 +17,19 @@ app.use(cookieParser());
 app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
 
 // API routes
-app.use('/accounts', require('./accounts/account.controller'));
-app.use('/departments', require('./departments/department.controller'));
-app.use('/employees', require('./employees/employee.controller'));
-app.use('/requests', require('./requests/request.controller'));
-app.use('/workflows', require('./workflows/workflow.controller'));
-
-app.use('/storage-locations', storageLocationRoutes);
-app.use('/brand', brandController);
-
-// Inventory management routes (use index.js)
-app.use('/category', categoryRoutes);
-app.use('/items', itemRoutes);
-app.use('/stock', stockRoutes);
+app.use('/api/accounts', require('./accounts/account.controller'));
+app.use('/api/employees', require('./employees/employee.controller'));
+app.use('/api/departments', require('./departments/department.controller'));
+app.use('/api/workflows', require('./workflows/workflow.controller'));
+app.use('/api/requests', require('./requests/request.controller'));
+app.use('/api/brands', require('./brand/brand.controller'));
+app.use('/api/categories', require('./category'));
+app.use('/api/items', require('./items'));
+app.use('/api/stocks', require('./stock'));
+app.use('/api/storage-locations', require('./storage-location'));
+app.use('/api/pcs', require('./pc'));
+app.use('/api/specifications', require('./specifications/specification.controller'));
+app.use('/api/dispose', require('./dispose'));
 
 // Swagger docs
 app.use('/api-docs', require('./_helpers/swagger'));

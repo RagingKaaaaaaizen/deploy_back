@@ -10,18 +10,10 @@ module.exports = {
 
 // Get all items (include category + brand)
 async function getAll() {
-    return await db.Stock.findAll({
+    return await db.Item.findAll({
         include: [
-            {
-                model: db.Item,
-                as: 'item',
-                attributes: ['id', 'name'],
-                include: [
-                    { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                    { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                ]
-            },
-            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name'] }
+            { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+            { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
         ]
     });
 }
@@ -45,7 +37,9 @@ async function create(params) {
 
     if (!params.brandId) throw 'Brand is required';
 
-    return await db.Item.create(params);
+    const item = await db.Item.create(params);
+    
+    return item;
 }
 // Update item
 async function update(id, params) {
@@ -66,7 +60,7 @@ async function getItem(id) {
     const item = await db.Item.findByPk(id, {
         include: [
             { model: db.Brand, as: 'brand', attributes: ['id', 'name'] },
-            { model: db.ItemCategory, as: 'category', attributes: ['id', 'name'] }
+            { model: db.Category, as: 'category', attributes: ['id', 'name'] }
         ]
     });
     if (!item) throw 'Item not found';

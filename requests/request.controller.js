@@ -5,14 +5,14 @@ const authorize = require('../_middleware/authorize');
 const Role = require('../_helpers/role');
 
 // routes
-router.get('/', authorize(), getAll);
-router.get('/:id', authorize(), getById);
-router.post('/', authorize(), create);
-router.put('/:id', authorize(), update);
-router.delete('/:id', authorize(Role.Admin), _delete);
-router.post('/:id/items', authorize(), addItems);
-router.put('/:id/status', authorize(Role.Admin), updateStatus);
-router.get('/employee/:employeeId', authorize(), getByEmployeeId);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), _delete);
+router.post('/:id/items', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), addItems);
+router.put('/:id/status', authorize([Role.SuperAdmin, Role.Admin]), updateStatus);
+router.get('/employee/:employeeId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getByEmployeeId);
 
 async function getAll(req, res, next) {
     try {

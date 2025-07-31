@@ -16,7 +16,7 @@ async function initialize() {
     const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
 
     // init models and add them to the exported db object
-    db.Account = require('../accounts/account.model')(sequelize, DataTypes);
+    db.Account = require('../accounts/account.model')(sequelize);
     db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
     db.Employee = require('../employees/employee.model')(sequelize, DataTypes);
     db.Department = require('../departments/department.model')(sequelize, DataTypes);
@@ -25,16 +25,18 @@ async function initialize() {
 
     // New Models
     db.Brand = require('../brand/brand.model')(sequelize, DataTypes);
-    db.ItemCategory = require('../category/category.model')(sequelize, DataTypes);
+    db.Category = require('../category/category.model')(sequelize, DataTypes);
     db.Item = require('../items/item.model')(sequelize, DataTypes);
     db.Stock = require('../stock/stock.model')(sequelize, DataTypes);
     db.StorageLocation = require('../storage-location/storage-location.model')(sequelize, DataTypes);
+    db.PC = require('../pc/pc.model')(sequelize, DataTypes);
+    db.SpecificationField = require('../specifications/specification.model')(sequelize, DataTypes);
+    db.Dispose = require('../dispose/dispose.model')(sequelize, DataTypes);
 
     // ---------------- RELATIONSHIPS ----------------
     // Storage Location -> Stock
-db.StorageLocation = require('../storage-location/storage-location.model')(sequelize, DataTypes);
-db.StorageLocation.hasMany(db.Stock, { foreignKey: 'locationId', as: 'stocks' });
-db.Stock.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location' });
+    db.StorageLocation.hasMany(db.Stock, { foreignKey: 'locationId', as: 'stocks' });
+    db.Stock.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location' });
 
 
 
@@ -44,8 +46,8 @@ db.Stock.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location
     db.Item.belongsTo(db.Brand, { foreignKey: 'brandId', as: 'brand' });
 
     // Category -> Item
-    db.ItemCategory.hasMany(db.Item, { foreignKey: 'categoryId', as: 'items' });
-    db.Item.belongsTo(db.ItemCategory, { foreignKey: 'categoryId', as: 'category' });
+    db.Category.hasMany(db.Item, { foreignKey: 'categoryId', as: 'items' });
+    db.Item.belongsTo(db.Category, { foreignKey: 'categoryId', as: 'category' });
 
     // Item -> Stock
     db.Item.hasMany(db.Stock, { foreignKey: 'itemId', as: 'stocks' });
@@ -54,6 +56,34 @@ db.Stock.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location
     // Account -> Stock
     db.Account.hasMany(db.Stock, { foreignKey: 'createdBy', as: 'userStocks' });
     db.Stock.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
+
+    // PC Relationships
+    db.Item.hasMany(db.PC, { foreignKey: 'itemId', as: 'pcs' });
+    db.PC.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
+
+    db.StorageLocation.hasMany(db.PC, { foreignKey: 'roomLocationId', as: 'pcs' });
+    db.PC.belongsTo(db.StorageLocation, { foreignKey: 'roomLocationId', as: 'roomLocation' });
+
+    db.Account.hasMany(db.PC, { foreignKey: 'createdBy', as: 'userPCs' });
+    db.PC.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
+
+    // Specification Field Relationships
+    db.Category.hasMany(db.SpecificationField, { foreignKey: 'categoryId', as: 'specificationFields' });
+    db.SpecificationField.belongsTo(db.Category, { foreignKey: 'categoryId', as: 'category' });
+
+    // Dispose Relationships (Added)
+    db.Item.hasMany(db.Dispose, { foreignKey: 'itemId', as: 'disposals' });
+    db.Dispose.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
+    
+    db.StorageLocation.hasMany(db.Dispose, { foreignKey: 'locationId', as: 'disposals' });
+    db.Dispose.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location' });
+    
+    db.Account.hasMany(db.Dispose, { foreignKey: 'createdBy', as: 'userDisposals' });
+    db.Dispose.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
+
+    // Stock-Dispose Direct Relationship
+    db.Dispose.hasMany(db.Stock, { foreignKey: 'disposeId', as: 'stockEntries' });
+    db.Stock.belongsTo(db.Dispose, { foreignKey: 'disposeId', as: 'disposal' });
 
     // ---------------- Other Existing Relationships ----------------
     db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
@@ -72,7 +102,7 @@ db.Stock.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location
     db.Request.belongsTo(db.Employee, { foreignKey: 'employeeId' });
 
     // sync all models with database
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: true }); // Use alter to preserve existing data
 
     // expose sequelize instance
     db.sequelize = sequelize;

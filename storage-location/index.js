@@ -16,10 +16,10 @@ function schema(req, res, next) {
 }
 
 // Routes
-router.get('/', authorize(), controller.getAll);
-router.get('/:id', authorize(), controller.getById);
-router.post('/', authorize(Role.Admin), schema, controller.create);
-router.put('/:id', authorize(Role.Admin), schema, controller.update);
-router.delete('/:id', authorize(Role.Admin), controller._delete);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), schema, controller.create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), schema, controller.update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller._delete);
 
 module.exports = router;

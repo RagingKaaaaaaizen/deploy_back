@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const authorize = require('../_middleware/authorize');
+const Role = require('../_helpers/role');
 const brandService = require('./brand.service');
 
 // Routes
-router.get('/', getAll);
-router.get('/:id', getById);
-router.post('/', create);
-router.put('/:id', update);
-router.delete('/:id', _delete);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), _delete);
 
 module.exports = router;
 

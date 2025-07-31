@@ -17,9 +17,9 @@ router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
 router.post('/validate-reset-token', validateResetTokenSchema, validateResetToken);
 router.post('/reset-password', resetPasswordSchema, resetPassword);
 
-router.get('/', authorize(Role.Admin), getAll);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin]), getAll);
 router.get('/:id', authorize(), getById);
-router.post('/', authorize(Role.Admin), createSchema, create);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createSchema, create);
 router.put('/:id', authorize(), updateSchema, update);
 router.delete('/:id', authorize(), _delete);
 
@@ -94,7 +94,7 @@ function registerSchema(req, res, next) {
 
 function register(req, res, next) {
     accountService.register(req.body, req.get('origin'))
-        .then(() => res.json({ message: "Registration successful, please check your email for verification instructions" }))
+        .then((result) => res.json(result))
         .catch(next);
 }
 
@@ -160,7 +160,7 @@ function getAll(req, res, next) {
 }
 
 function getById(req, res, next) {
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin && req.user.role !== Role.SuperAdmin) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
@@ -177,7 +177,7 @@ function createSchema(req, res, next) {
         email: Joi.string().email().required(),
         password: Joi.string().min(6).required(),
         confirmPassword: Joi.string().valid(Joi.ref('password')).required(),
-        role: Joi.string().valid(Role.Admin, Role.User).required(),
+        role: Joi.string().valid(Role.SuperAdmin, Role.Admin, Role.Viewer).required(),
         status: Joi.string().valid('Active', 'Inactive').default('Active')
     });
     validateRequest(req, next, schema);
@@ -200,8 +200,10 @@ function updateSchema(req, res, next) {
         status: Joi.string().valid('Active', 'Inactive').empty('')
     };
 
-    if (req.user.role === Role.Admin) {
-        schemaRules.role = Joi.string().valid(Role.Admin, Role.User).empty('');
+    if (req.user.role === Role.SuperAdmin) {
+        schemaRules.role = Joi.string().valid(Role.SuperAdmin, Role.Admin, Role.Viewer).empty('');
+    } else if (req.user.role === Role.Admin) {
+        schemaRules.role = Joi.string().valid(Role.Admin, Role.Viewer).empty('');
     }
 
     const schema = Joi.object(schemaRules).with('password', 'confirmPassword');
@@ -209,7 +211,7 @@ function updateSchema(req, res, next) {
 }
 
 function update(req, res, next) {
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin && req.user.role !== Role.SuperAdmin) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
@@ -219,7 +221,7 @@ function update(req, res, next) {
 }
 
 function _delete(req, res, next) {
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin && req.user.role !== Role.SuperAdmin) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 

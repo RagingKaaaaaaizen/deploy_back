@@ -5,14 +5,14 @@ const authorize = require('../_middleware/authorize');
 const Role = require('../_helpers/role');
 
 // routes
-router.get('/', authorize(), getAll);
-router.get('/employee/:employeeId', authorize(), getByEmployeeId);
-router.get('/:id', authorize(), getById);
-router.post('/', authorize(Role.Admin), create);
-router.put('/:id', authorize(Role.Admin), update);
-router.delete('/:id', authorize(Role.Admin), _delete);
-router.put('/:id/status', authorize(Role.Admin), updateStatus);
-router.post('/onboarding', authorize(Role.Admin), onboarding);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
+router.get('/employee/:employeeId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getByEmployeeId);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), _delete);
+router.put('/:id/status', authorize([Role.SuperAdmin, Role.Admin]), updateStatus);
+router.post('/onboarding', authorize([Role.SuperAdmin, Role.Admin]), onboarding);
 
 module.exports = router;
 
