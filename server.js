@@ -10,6 +10,8 @@ const errorHandler = require('./_middleware/error-handler');
 const categoryRoutes = require('./category');
 const itemRoutes = require('./items');
 const stockRoutes = require('./stock');
+const brandController = require('./brand/brand.controller');
+const storageLocationRoutes = require('./storage-location');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -24,6 +26,9 @@ app.use('/departments', require('./departments/department.controller'));
 app.use('/employees', require('./employees/employee.controller'));
 app.use('/requests', require('./requests/request.controller'));
 app.use('/workflows', require('./workflows/workflow.controller'));
+
+app.use('/storage-locations', storageLocationRoutes);
+app.use('/brand', brandController);
 
 // Inventory management routes (use index.js)
 app.use('/category', categoryRoutes);

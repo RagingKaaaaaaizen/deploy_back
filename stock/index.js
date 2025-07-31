@@ -12,7 +12,8 @@ function addStockSchema(req, res, next) {
         itemId: Joi.number().required(),
         quantity: Joi.number().required(),
         type: Joi.string().valid('ADD', 'DISPOSE').required(), // match model ENUM
-        location: Joi.string().required(),                      // NEW FIELD
+        locationId: Joi.number().required(),                   // FOREIGN KEY to StorageLocation
+        price: Joi.number().required(),                        // NEW FIELD: price
         remarks: Joi.string().allow('')
     });
     validateRequest(req, next, schema);
@@ -22,16 +23,18 @@ function addStockSchema(req, res, next) {
 function updateStockSchema(req, res, next) {
     const schema = Joi.object({
         quantity: Joi.number().required(),
-        location: Joi.string().required(),                      // allow updating location too
+        locationId: Joi.number().required(),
+        price: Joi.number().required(),                        // allow updating price
         remarks: Joi.string().allow('')
     });
     validateRequest(req, next, schema);
 }
 
 // Routes
-router.get('/', authorize(), controller.getLogs);                      // GET logs
-router.post('/', authorize(Role.Admin), addStockSchema, controller.addStock); // CREATE
-router.put('/:id', authorize(Role.Admin), updateStockSchema, controller.updateStock); // UPDATE
-router.delete('/:id', authorize(Role.Admin), controller._delete);      // DELETE
+router.get('/', authorize(), controller.getLogs);                                   // GET all stock logs
+router.get('/:id', authorize(), controller.getById);                                // GET single stock log
+router.post('/', authorize(Role.Admin), addStockSchema, controller.addStock);      // CREATE stock
+router.put('/:id', authorize(Role.Admin), updateStockSchema, controller.updateStock); // UPDATE stock
+router.delete('/:id', authorize(Role.Admin), controller._delete);                   // DELETE stock
 
 module.exports = router;

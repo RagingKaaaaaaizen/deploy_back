@@ -8,7 +8,9 @@ function model(sequelize) {
         itemId: { type: DataTypes.INTEGER, allowNull: false },  // Reference by ID only
         quantity: { type: DataTypes.INTEGER, allowNull: false },
         type: { type: DataTypes.ENUM('ADD', 'DISPOSE'), allowNull: false },
-        location: { type: DataTypes.STRING, allowNull: false }, // NEW FIELD
+        locationId: { type: DataTypes.INTEGER, allowNull: false }, // NEW FIELD
+        price: { type: DataTypes.FLOAT, allowNull: false },       // NEW
+        totalPrice: { type: DataTypes.FLOAT, allowNull: false },
         createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
         createdBy: { type: DataTypes.INTEGER, allowNull: false } // Reference by ID only
     };

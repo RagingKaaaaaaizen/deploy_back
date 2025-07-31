@@ -23,24 +23,39 @@ async function initialize() {
     db.Workflow = require('../workflows/workflow.model')(sequelize, DataTypes);
     db.Request = require('../requests/request.model')(sequelize, DataTypes);
 
+    // New Models
+    db.Brand = require('../brand/brand.model')(sequelize, DataTypes);
+    db.ItemCategory = require('../category/category.model')(sequelize, DataTypes);
+    db.Item = require('../items/item.model')(sequelize, DataTypes);
+    db.Stock = require('../stock/stock.model')(sequelize, DataTypes);
+    db.StorageLocation = require('../storage-location/storage-location.model')(sequelize, DataTypes);
 
-   // After existing model imports
+    // ---------------- RELATIONSHIPS ----------------
+    // Storage Location -> Stock
+db.StorageLocation = require('../storage-location/storage-location.model')(sequelize, DataTypes);
+db.StorageLocation.hasMany(db.Stock, { foreignKey: 'locationId', as: 'stocks' });
+db.Stock.belongsTo(db.StorageLocation, { foreignKey: 'locationId', as: 'location' });
 
-db.ItemCategory = require('../category/category.model')(sequelize, DataTypes);
-db.Item = require('../items/item.model')(sequelize, DataTypes);
-db.Stock = require('../stock/stock.model')(sequelize, DataTypes);
 
-// Relationships for new models
-db.ItemCategory.hasMany(db.Item, { foreignKey: 'categoryId', as: 'items' });
-db.Item.belongsTo(db.ItemCategory, { foreignKey: 'categoryId', as: 'category' });
 
-db.Item.hasMany(db.Stock, { foreignKey: 'itemId', as: 'stocks' });
-db.Stock.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
 
-db.Account.hasMany(db.Stock, { foreignKey: 'createdBy', as: 'userStocks' });
-db.Stock.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
- 
-    // define relationships
+    // Brand -> Item
+    db.Brand.hasMany(db.Item, { foreignKey: 'brandId', as: 'items' });
+    db.Item.belongsTo(db.Brand, { foreignKey: 'brandId', as: 'brand' });
+
+    // Category -> Item
+    db.ItemCategory.hasMany(db.Item, { foreignKey: 'categoryId', as: 'items' });
+    db.Item.belongsTo(db.ItemCategory, { foreignKey: 'categoryId', as: 'category' });
+
+    // Item -> Stock
+    db.Item.hasMany(db.Stock, { foreignKey: 'itemId', as: 'stocks' });
+    db.Stock.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
+
+    // Account -> Stock
+    db.Account.hasMany(db.Stock, { foreignKey: 'createdBy', as: 'userStocks' });
+    db.Stock.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
+
+    // ---------------- Other Existing Relationships ----------------
     db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
     db.RefreshToken.belongsTo(db.Account);
 
@@ -56,12 +71,10 @@ db.Stock.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
     db.Employee.hasMany(db.Request, { foreignKey: 'employeeId' });
     db.Request.belongsTo(db.Employee, { foreignKey: 'employeeId' });
 
-
-
     // sync all models with database
     await sequelize.sync({ alter: true });
 
-    // expose sequelize instance to be used throughout the app
+    // expose sequelize instance
     db.sequelize = sequelize;
     db.Sequelize = Sequelize;
 }

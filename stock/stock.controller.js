@@ -9,6 +9,11 @@ exports.getLogs = (req, res, next) => {
 
 // ADD stock
 exports.addStock = (req, res, next) => {
+    // Ensure locationId is present in request body
+    if (!req.body.locationId) {
+        return res.status(400).send({ message: 'Location is required' });
+    }
+
     stockService.create(req.body, req.user.id)
         .then(stock => res.send(stock))
         .catch(next);
@@ -27,10 +32,10 @@ exports._delete = (req, res, next) => {
         .then(() => res.send({ message: 'Stock entry deleted successfully' }))
         .catch(next);
 };
-// GET stock by ID (if needed)
-exports.getById = (req, res, next) => { 
+
+// GET stock by ID
+exports.getById = (req, res, next) => {
     stockService.getById(req.params.id)
         .then(stock => stock ? res.send(stock) : res.sendStatus(404))
         .catch(next);
-}
-
+};

@@ -11,6 +11,7 @@ function createSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().required(),
         categoryId: Joi.number().required(),
+        brandId: Joi.number().required(), // <-- ADD BRAND ID REQUIRED
         description: Joi.string().allow('')
     });
     validateRequest(req, next, schema);
@@ -20,6 +21,7 @@ function updateSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().empty(''),
         categoryId: Joi.number().optional(),
+        brandId: Joi.number().optional(), // <-- ADD BRAND ID OPTIONAL FOR UPDATE
         description: Joi.string().allow('')
     });
     validateRequest(req, next, schema);
