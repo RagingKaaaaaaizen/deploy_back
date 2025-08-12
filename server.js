@@ -28,6 +28,8 @@ app.use('/api/items', require('./items'));
 app.use('/api/stocks', require('./stock'));
 app.use('/api/storage-locations', require('./storage-location'));
 app.use('/api/pcs', require('./pc'));
+app.use('/api/pc-components', require('./pc/pc-component.routes'));
+app.use('/api/room-locations', require('./pc/room-location.routes'));
 app.use('/api/specifications', require('./specifications/specification.controller'));
 app.use('/api/dispose', require('./dispose'));
 

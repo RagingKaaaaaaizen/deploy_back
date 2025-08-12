@@ -1,6 +1,7 @@
 const config = require('./config.json');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const db = require('./_helpers/db');
 
 async function fixForeignKeys() {
     try {
@@ -64,4 +65,139 @@ async function fixForeignKeys() {
     }
 }
 
-fixForeignKeys(); 
+async function updatePCTable() {
+    try {
+        const { host, port, user, password, database } = config.database;
+        const connection = await mysql.createConnection({ host, port, user, password, database });
+        
+        console.log('🔄 Starting PC table schema update...');
+        
+        // Check if itemId column exists
+        const [columns] = await connection.execute(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'PCs' AND COLUMN_NAME = 'itemId'
+        `, [database]);
+        
+        if (columns.length > 0) {
+            console.log('📋 Found itemId column, removing foreign key constraints...');
+            
+            // Get foreign key constraints
+            const [foreignKeys] = await connection.execute(`
+                SELECT CONSTRAINT_NAME 
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'PCs' AND REFERENCED_TABLE_NAME = 'Items'
+            `, [database]);
+            
+            // Drop foreign key constraints
+            for (const fk of foreignKeys) {
+                try {
+                    await connection.execute(`ALTER TABLE PCs DROP FOREIGN KEY ${fk.CONSTRAINT_NAME}`);
+                    console.log(`✅ Dropped foreign key: ${fk.CONSTRAINT_NAME}`);
+                } catch (error) {
+                    console.log(`⚠️ Could not drop foreign key ${fk.CONSTRAINT_NAME}: ${error.message}`);
+                }
+            }
+            
+            // Drop the itemId column
+            try {
+                await connection.execute('ALTER TABLE PCs DROP COLUMN itemId');
+                console.log('✅ Dropped itemId column');
+            } catch (error) {
+                console.log(`⚠️ Could not drop itemId column: ${error.message}`);
+            }
+        }
+        
+        // Check if categoryId column exists
+        const [categoryColumns] = await connection.execute(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'PCs' AND COLUMN_NAME = 'categoryId'
+        `, [database]);
+        
+        if (categoryColumns.length > 0) {
+            console.log('📋 Found categoryId column, removing foreign key constraints...');
+            
+            // Get foreign key constraints for categoryId
+            const [categoryForeignKeys] = await connection.execute(`
+                SELECT CONSTRAINT_NAME 
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'PCs' AND REFERENCED_TABLE_NAME = 'Categories'
+            `, [database]);
+            
+            // Drop foreign key constraints
+            for (const fk of categoryForeignKeys) {
+                try {
+                    await connection.execute(`ALTER TABLE PCs DROP FOREIGN KEY ${fk.CONSTRAINT_NAME}`);
+                    console.log(`✅ Dropped foreign key: ${fk.CONSTRAINT_NAME}`);
+                } catch (error) {
+                    console.log(`⚠️ Could not drop foreign key ${fk.CONSTRAINT_NAME}: ${error.message}`);
+                }
+            }
+            
+            // Drop the categoryId column
+            try {
+                await connection.execute('ALTER TABLE PCs DROP COLUMN categoryId');
+                console.log('✅ Dropped categoryId column');
+            } catch (error) {
+                console.log(`⚠️ Could not drop categoryId column: ${error.message}`);
+            }
+        }
+        
+        // Check if quantity column exists
+        const [quantityColumns] = await connection.execute(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'PCs' AND COLUMN_NAME = 'quantity'
+        `, [database]);
+        
+        if (quantityColumns.length > 0) {
+            try {
+                await connection.execute('ALTER TABLE PCs DROP COLUMN quantity');
+                console.log('✅ Dropped quantity column');
+            } catch (error) {
+                console.log(`⚠️ Could not drop quantity column: ${error.message}`);
+            }
+        }
+        
+        // Check if specifications column exists
+        const [specColumns] = await connection.execute(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'PCs' AND COLUMN_NAME = 'specifications'
+        `, [database]);
+        
+        if (specColumns.length > 0) {
+            try {
+                await connection.execute('ALTER TABLE PCs DROP COLUMN specifications');
+                console.log('✅ Dropped specifications column');
+            } catch (error) {
+                console.log(`⚠️ Could not drop specifications column: ${error.message}`);
+            }
+        }
+        
+        await connection.end();
+        console.log('✅ PC table schema update completed successfully!');
+        
+    } catch (error) {
+        console.error('❌ Error updating PC table schema:', error.message);
+    }
+}
+
+async function runMigrations() {
+    try {
+        console.log('🔄 Starting database migrations...');
+        
+        await fixForeignKeys();
+        await updatePCTable();
+        
+        console.log('✅ All migrations completed successfully!');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Migration failed:', error);
+        process.exit(1);
+    }
+}
+
+// Run migrations
+runMigrations(); 

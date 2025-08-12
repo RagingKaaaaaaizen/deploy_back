@@ -21,9 +21,7 @@ function createSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().required(),
         serialNumber: Joi.string().allow(''),
-        itemId: Joi.number().required(),
         roomLocationId: Joi.number().required(),
-        specifications: Joi.string().allow(''),
         status: Joi.string().valid('Active', 'Inactive', 'Maintenance', 'Retired').default('Active'),
         assignedTo: Joi.string().allow(''),
         notes: Joi.string().allow('')
@@ -35,9 +33,7 @@ function updateSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().empty(''),
         serialNumber: Joi.string().allow(''),
-        itemId: Joi.number().empty(''),
         roomLocationId: Joi.number().empty(''),
-        specifications: Joi.string().allow(''),
         status: Joi.string().valid('Active', 'Inactive', 'Maintenance', 'Retired').empty(''),
         assignedTo: Joi.string().allow(''),
         notes: Joi.string().allow('')

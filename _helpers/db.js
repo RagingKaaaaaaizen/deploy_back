@@ -29,7 +29,9 @@ async function initialize() {
     db.Item = require('../items/item.model')(sequelize, DataTypes);
     db.Stock = require('../stock/stock.model')(sequelize, DataTypes);
     db.StorageLocation = require('../storage-location/storage-location.model')(sequelize, DataTypes);
+    db.RoomLocation = require('../pc/room-location.model')(sequelize, DataTypes);
     db.PC = require('../pc/pc.model')(sequelize, DataTypes);
+    db.PCComponent = require('../pc/pc-component.model')(sequelize, DataTypes);
     db.SpecificationField = require('../specifications/specification.model')(sequelize, DataTypes);
     db.Dispose = require('../dispose/dispose.model')(sequelize, DataTypes);
 
@@ -57,15 +59,29 @@ async function initialize() {
     db.Account.hasMany(db.Stock, { foreignKey: 'createdBy', as: 'userStocks' });
     db.Stock.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
 
-    // PC Relationships
-    db.Item.hasMany(db.PC, { foreignKey: 'itemId', as: 'pcs' });
-    db.PC.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
+    // Room Location Relationships
+    db.Account.hasMany(db.RoomLocation, { foreignKey: 'createdBy', as: 'userRoomLocations' });
+    db.RoomLocation.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
 
-    db.StorageLocation.hasMany(db.PC, { foreignKey: 'roomLocationId', as: 'pcs' });
-    db.PC.belongsTo(db.StorageLocation, { foreignKey: 'roomLocationId', as: 'roomLocation' });
+    // PC Relationships
+    db.RoomLocation.hasMany(db.PC, { foreignKey: 'roomLocationId', as: 'pcs' });
+    db.PC.belongsTo(db.RoomLocation, { foreignKey: 'roomLocationId', as: 'roomLocation' });
 
     db.Account.hasMany(db.PC, { foreignKey: 'createdBy', as: 'userPCs' });
     db.PC.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
+
+    // PC Component Relationships
+    db.PC.hasMany(db.PCComponent, { foreignKey: 'pcId', as: 'components' });
+    db.PCComponent.belongsTo(db.PC, { foreignKey: 'pcId', as: 'pc' });
+
+    db.Item.hasMany(db.PCComponent, { foreignKey: 'itemId', as: 'pcComponents' });
+    db.PCComponent.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
+
+    db.Stock.hasMany(db.PCComponent, { foreignKey: 'stockId', as: 'pcComponents' });
+    db.PCComponent.belongsTo(db.Stock, { foreignKey: 'stockId', as: 'stock' });
+
+    db.Account.hasMany(db.PCComponent, { foreignKey: 'createdBy', as: 'userPCComponents' });
+    db.PCComponent.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
 
     // Specification Field Relationships
     db.Category.hasMany(db.SpecificationField, { foreignKey: 'categoryId', as: 'specificationFields' });

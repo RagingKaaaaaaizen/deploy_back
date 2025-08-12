@@ -71,21 +71,35 @@ async function create(params, userId) {
         const disposal = await db.Dispose.create(disposalData);
         console.log('Disposal record created successfully:', disposal.id);
         
-        // Create corresponding stock entry for disposal
-        const stockData = {
-            itemId: params.itemId,
-            quantity: params.quantity,
-            locationId: params.locationId,
-            price: disposalValue, // Use disposal value as price
-            totalPrice: totalValue,
-            remarks: `Disposal: ${params.reason || 'No reason provided'}`,
-            disposeId: disposal.id, // Link to disposal record
-            createdBy: userId
-        };
+        // Find existing stock entries with positive quantities (additions)
+        const stockEntries = await db.Stock.findAll({
+            where: { 
+                itemId: params.itemId,
+                disposeId: null // Only addition entries
+            },
+            order: [['createdAt', 'ASC']] // Oldest first
+        });
 
-        console.log('Creating stock entry for disposal:', stockData);
-        const stockEntry = await db.Stock.create(stockData);
-        console.log('Stock entry created successfully:', stockEntry.id);
+        let remainingQuantity = params.quantity;
+        
+        // Update existing stock entries, reducing from oldest first
+        for (const stock of stockEntries) {
+            if (remainingQuantity <= 0) break;
+            
+            if (stock.quantity > 0) {
+                const quantityToDeduct = Math.min(stock.quantity, remainingQuantity);
+                stock.quantity -= quantityToDeduct;
+                remainingQuantity -= quantityToDeduct;
+                
+                // Update the stock entry
+                await stock.save();
+                console.log(`Reduced stock entry ${stock.id} by ${quantityToDeduct} for disposal, new quantity: ${stock.quantity}`);
+            }
+        }
+        
+        if (remainingQuantity > 0) {
+            throw `Insufficient stock for disposal. Could only dispose ${params.quantity - remainingQuantity} out of ${params.quantity} requested`;
+        }
         
         // Return simple disposal record without complex relationships
         return disposal;
@@ -141,30 +155,39 @@ async function validateDisposal(itemId, quantity) {
     console.log('Found stock entries:', stockEntries.length);
     console.log('Stock entries:', stockEntries.map(s => ({ id: s.id, itemId: s.itemId, quantity: s.quantity, disposeId: s.disposeId })));
 
-    // Calculate available stock
-    let availableStock = 0;
+    // Calculate available stock (sum of all positive quantities)
+    let totalStock = 0;
     stockEntries.forEach(entry => {
-        if (entry.disposeId) {
-            // This is a disposal entry
-            availableStock -= entry.quantity;
-            console.log('Subtracting disposal:', entry.quantity, 'New total:', availableStock);
-        } else {
-            // This is an addition entry
-            availableStock += entry.quantity;
-            console.log('Adding stock:', entry.quantity, 'New total:', availableStock);
+        if (entry.quantity > 0) {
+            totalStock += entry.quantity;
+            console.log('Adding stock:', entry.quantity, 'New total:', totalStock);
         }
     });
 
-    // Ensure stock doesn't go negative
-    availableStock = Math.max(0, availableStock);
-    console.log('Final available stock:', availableStock);
+    // Get PC components usage for this item
+    const pcComponents = await db.PCComponent.findAll({
+        where: { itemId }
+    });
+    
+    const usedInPCComponents = pcComponents.reduce((total, component) => {
+        return total + component.quantity;
+    }, 0);
+    
+    console.log('PC components using this item:', pcComponents.length);
+    console.log('Total quantity used in PC components:', usedInPCComponents);
+
+    // Calculate available stock (total stock - used in PC components)
+    const availableStock = Math.max(0, totalStock - usedInPCComponents);
+    console.log('Total stock:', totalStock, 'Used in PCs:', usedInPCComponents, 'Available:', availableStock);
 
     // If quantity is 0, just return available stock info
     if (quantity === 0) {
         console.log('Quantity is 0, returning available stock info');
         return {
             valid: true,
-            availableStock: availableStock
+            availableStock: availableStock,
+            totalStock: totalStock,
+            usedInPCComponents: usedInPCComponents
         };
     }
 
@@ -172,14 +195,16 @@ async function validateDisposal(itemId, quantity) {
         console.log('Validation failed: quantity > availableStock');
         return {
             valid: false,
-            message: `Cannot dispose ${quantity} items. Only ${availableStock} items available.`
+            message: `Cannot dispose ${quantity} items. Only ${availableStock} items available (${totalStock} total stock - ${usedInPCComponents} used in PC components).`
         };
     }
 
     console.log('Validation successful');
     return {
         valid: true,
-        availableStock: availableStock
+        availableStock: availableStock,
+        totalStock: totalStock,
+        usedInPCComponents: usedInPCComponents
     };
 }
 

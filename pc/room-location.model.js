@@ -6,22 +6,16 @@ function model(sequelize) {
     const attributes = {
         id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
         name: { type: DataTypes.STRING, allowNull: false },
-        serialNumber: { type: DataTypes.STRING, allowNull: true, unique: true },
-        roomLocationId: { 
-            type: DataTypes.INTEGER, 
-            allowNull: false,
-            references: {
-                model: 'RoomLocations',
-                key: 'id'
-            }
-        },
+        description: { type: DataTypes.TEXT, allowNull: true },
+        building: { type: DataTypes.STRING, allowNull: true },
+        floor: { type: DataTypes.STRING, allowNull: true },
+        roomNumber: { type: DataTypes.STRING, allowNull: true },
+        capacity: { type: DataTypes.INTEGER, allowNull: true },
         status: { 
-            type: DataTypes.ENUM('Active', 'Inactive', 'Maintenance', 'Retired'),
+            type: DataTypes.ENUM('Active', 'Inactive', 'Maintenance'),
             allowNull: false,
             defaultValue: 'Active'
         },
-        assignedTo: { type: DataTypes.STRING, allowNull: true },
-        notes: { type: DataTypes.TEXT, allowNull: true },
         createdBy: { type: DataTypes.INTEGER, allowNull: true },
         createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
         updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
@@ -32,11 +26,11 @@ function model(sequelize) {
         scopes: {
             withAssociations: {
                 include: [
-                    { model: sequelize.models.RoomLocation, as: 'roomLocation', attributes: ['id', 'name'] }
+                    { model: sequelize.models.PC, as: 'pcs', attributes: ['id', 'name'] }
                 ]
             }
         }
     };
 
-    return sequelize.define('PC', attributes, options);
+    return sequelize.define('RoomLocation', attributes, options);
 } 
