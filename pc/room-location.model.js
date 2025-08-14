@@ -7,8 +7,6 @@ function model(sequelize) {
         id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
         name: { type: DataTypes.STRING, allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
-        building: { type: DataTypes.STRING, allowNull: true },
-        floor: { type: DataTypes.STRING, allowNull: true },
         roomNumber: { type: DataTypes.STRING, allowNull: true },
         capacity: { type: DataTypes.INTEGER, allowNull: true },
         status: { 
