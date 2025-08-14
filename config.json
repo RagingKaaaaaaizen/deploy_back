@@ -3,7 +3,7 @@
       "host": "localhost",
       "port": 3306,
       "user": "root",
-      "password": "1234",
+      "password": "root",
       "database": "amp"
     },
     "secret": "{b0595d80-386b-469d-b0c4-e375aa5ed45f}",
