@@ -40,6 +40,7 @@ async function initialize() {
     db.PCComponent = require('../pc/pc-component.model')(sequelize, DataTypes);
     db.SpecificationField = require('../specifications/specification.model')(sequelize, DataTypes);
     db.Dispose = require('../dispose/dispose.model')(sequelize, DataTypes);
+    db.ActivityLog = require('../activity-log/activity-log.model')(sequelize, DataTypes);
 
     // ---------------- RELATIONSHIPS ----------------
     // Storage Location -> Stock
@@ -122,6 +123,10 @@ async function initialize() {
 
     db.Employee.hasMany(db.Request, { foreignKey: 'employeeId' });
     db.Request.belongsTo(db.Employee, { foreignKey: 'employeeId' });
+
+    // Activity Log Relationships
+    db.Account.hasMany(db.ActivityLog, { foreignKey: 'userId', as: 'activityLogs' });
+    db.ActivityLog.belongsTo(db.Account, { foreignKey: 'userId', as: 'user' });
 
     // sync all models with database
     await sequelize.sync({ alter: true }); // Use alter to preserve existing data

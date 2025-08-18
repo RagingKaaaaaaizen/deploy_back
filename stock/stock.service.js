@@ -1,4 +1,5 @@
 const db = require('../_helpers/db');
+const activityLogService = require('../activity-log/activity-log.service');
 
 module.exports = {
     getAll,
@@ -49,6 +50,29 @@ async function create(params, userId) {
     };
 
     const stock = await db.Stock.create(stockData);
+    
+    // Log activity after successful stock creation
+    try {
+        const item = await db.Item.findByPk(params.itemId);
+        const location = await db.StorageLocation.findByPk(params.locationId);
+        
+        await activityLogService.logActivity({
+            userId: params.createdBy,
+            action: 'ADD_STOCK',
+            entityType: 'STOCK',
+            entityId: stock.id,
+            entityName: `Added ${params.quantity} units of ${item.name} to ${location.name}`,
+            details: { 
+                itemId: params.itemId,
+                locationId: params.locationId,
+                quantity: params.quantity,
+                price: params.price,
+                totalPrice: totalPrice
+            }
+        });
+    } catch (error) {
+        console.error('Failed to log stock creation activity:', error);
+    }
     
     return stock;
 }

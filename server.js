@@ -32,6 +32,7 @@ app.use('/api/pc-components', require('./pc/pc-component.routes'));
 app.use('/api/room-locations', require('./pc/room-location.routes'));
 app.use('/api/specifications', require('./specifications/specification.controller'));
 app.use('/api/dispose', require('./dispose'));
+app.use('/api/activity-logs', require('./activity-log'));
 
 // Swagger docs
 app.use('/api-docs', require('./_helpers/swagger'));

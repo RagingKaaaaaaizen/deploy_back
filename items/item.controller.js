@@ -16,21 +16,33 @@ exports.getById = (req, res, next) => {
 
 // CREATE item
 exports.create = (req, res, next) => {
-    itemService.create(req.body)
+    const itemData = {
+        ...req.body,
+        createdBy: req.user ? req.user.id : null
+    };
+    
+    itemService.create(itemData)
         .then(item => res.json(item))
         .catch(next);
 };
 
 // UPDATE item
 exports.update = (req, res, next) => {
-    itemService.update(req.params.id, req.body)
+    const itemData = {
+        ...req.body,
+        updatedBy: req.user ? req.user.id : null
+    };
+    
+    itemService.update(req.params.id, itemData)
         .then(item => res.json(item))
         .catch(next);
 };
 
 // DELETE item
 exports._delete = (req, res, next) => {
-    itemService.delete(req.params.id)
+    const userId = req.user ? req.user.id : null;
+    
+    itemService.delete(req.params.id, userId)
         .then(() => res.json({ message: 'Item deleted successfully' }))
         .catch(next);
 };

@@ -1,4 +1,5 @@
 const db = require('../_helpers/db');
+const activityLogService = require('../activity-log/activity-log.service');
 
 module.exports = {
     getAll,
@@ -39,19 +40,74 @@ async function create(params) {
 
     const item = await db.Item.create(params);
     
+    // Log activity if user ID is provided
+    if (params.createdBy) {
+        try {
+            await activityLogService.logActivity({
+                userId: params.createdBy,
+                action: 'CREATE_ITEM',
+                entityType: 'ITEM',
+                entityId: item.id,
+                entityName: item.name,
+                details: { itemData: params }
+            });
+        } catch (error) {
+            console.error('Failed to log item creation activity:', error);
+        }
+    }
+    
     return item;
 }
 // Update item
 async function update(id, params) {
     const item = await getItem(id);
+    const oldData = { ...item.toJSON() };
+    
     Object.assign(item, params);
     await item.save();
+    
+    // Log activity if user ID is provided
+    if (params.updatedBy || params.createdBy) {
+        try {
+            await activityLogService.logActivity({
+                userId: params.updatedBy || params.createdBy,
+                action: 'UPDATE_ITEM',
+                entityType: 'ITEM',
+                entityId: item.id,
+                entityName: item.name,
+                details: { 
+                    oldData: oldData,
+                    newData: params 
+                }
+            });
+        } catch (error) {
+            console.error('Failed to log item update activity:', error);
+        }
+    }
+    
     return item;
 }
 
 // Delete item
-async function _delete(id) {
+async function _delete(id, userId = null) {
     const item = await getItem(id);
+    
+    // Log activity before deletion if user ID is provided
+    if (userId) {
+        try {
+            await activityLogService.logActivity({
+                userId: userId,
+                action: 'DELETE_ITEM',
+                entityType: 'ITEM',
+                entityId: item.id,
+                entityName: item.name,
+                details: { deletedItem: item.toJSON() }
+            });
+        } catch (error) {
+            console.error('Failed to log item deletion activity:', error);
+        }
+    }
+    
     await item.destroy();
 }
 

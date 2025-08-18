@@ -1,4 +1,5 @@
 const db = require('../_helpers/db');
+const activityLogService = require('../activity-log/activity-log.service');
 
 module.exports = {
     getAll,
@@ -99,6 +100,26 @@ async function create(params, userId) {
         
         if (remainingQuantity > 0) {
             throw `Insufficient stock for disposal. Could only dispose ${params.quantity - remainingQuantity} out of ${params.quantity} requested`;
+        }
+        
+        // Log activity after successful disposal creation
+        try {
+            const item = await db.Item.findByPk(params.itemId);
+            await activityLogService.logActivity({
+                userId: params.createdBy,
+                action: 'DISPOSE_ITEM',
+                entityType: 'DISPOSE',
+                entityId: disposal.id,
+                entityName: `Disposed ${params.quantity} units of ${item.name}`,
+                details: { 
+                    itemId: params.itemId,
+                    quantity: params.quantity,
+                    reason: params.reason,
+                    disposalValue: params.disposalValue
+                }
+            });
+        } catch (error) {
+            console.error('Failed to log disposal creation activity:', error);
         }
         
         // Return simple disposal record without complex relationships

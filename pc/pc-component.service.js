@@ -1,4 +1,5 @@
 const db = require('../_helpers/db');
+const activityLogService = require('../activity-log/activity-log.service');
 
 module.exports = {
     getAll,
@@ -85,6 +86,28 @@ async function create(params, userId) {
         await reduceStockQuantities(params.itemId, params.quantity, transaction);
 
         await transaction.commit();
+        
+        // Log activity after successful creation
+        try {
+            const pc = await db.PC.findByPk(params.pcId);
+            const item = await db.Item.findByPk(params.itemId);
+            
+            await activityLogService.logActivity({
+                userId,
+                action: 'ADD_PC_COMPONENT',
+                entityType: 'PC_COMPONENT',
+                entityId: component.id,
+                entityName: `${item.name} added to PC ${pc.name || pc.id}`,
+                details: { 
+                    pcId: params.pcId,
+                    itemId: params.itemId,
+                    quantity: params.quantity,
+                    price: params.price
+                }
+            });
+        } catch (error) {
+            console.error('Failed to log PC component creation activity:', error);
+        }
         
         return component;
     } catch (error) {
