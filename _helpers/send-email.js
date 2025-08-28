@@ -15,8 +15,21 @@ const config = {
 module.exports = sendEmail;
 
 async function sendEmail({ to, subject, html, from = config.emailFrom }) {
-    const transporter = nodemailer.createTransport(config.smtpOptions);
-    await transporter.sendMail({ from, to, subject, html });
+    try {
+        // Check if SMTP credentials are properly configured
+        if (!config.smtpOptions.auth.user || !config.smtpOptions.auth.pass) {
+            console.warn('SMTP credentials not configured, skipping email send');
+            return;
+        }
+        
+        const transporter = nodemailer.createTransport(config.smtpOptions);
+        await transporter.sendMail({ from, to, subject, html });
+        console.log(`Email sent successfully to ${to}`);
+    } catch (error) {
+        console.error('Email send error:', error);
+        // Don't throw error to prevent registration from failing
+        // Just log the error and continue
+    }
 }
 
 //hi

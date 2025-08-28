@@ -74,23 +74,33 @@ async function authenticate({ email, password, ipAddress }) {
 }
 
 async function refreshToken({ token, ipAddress }) {
-    const refreshToken = await getRefreshToken(token);
-    const account = await refreshToken.getAccount();
+    // Check if token is provided
+    if (!token) {
+        throw { message: 'Token is required' };
+    }
+    
+    try {
+        const refreshToken = await getRefreshToken(token);
+        const account = await refreshToken.getAccount();
 
-    const newRefreshToken = generateRefreshToken(account, ipAddress);
-    refreshToken.revoked = Date.now();
-    refreshToken.revokedByIp = ipAddress;
-    refreshToken.replacedByToken = newRefreshToken.token;
-    await refreshToken.save();
-    await newRefreshToken.save();
+        const newRefreshToken = generateRefreshToken(account, ipAddress);
+        refreshToken.revoked = Date.now();
+        refreshToken.revokedByIp = ipAddress;
+        refreshToken.replacedByToken = newRefreshToken.token;
+        await refreshToken.save();
+        await newRefreshToken.save();
 
-    const jwtToken = generateJwtToken(account);
+        const jwtToken = generateJwtToken(account);
 
-    return {
-        ...basicDetails(account),
-        jwtToken,
-        refreshToken: newRefreshToken.token
-    };
+        return {
+            ...basicDetails(account),
+            jwtToken,
+            refreshToken: newRefreshToken.token
+        };
+    } catch (error) {
+        console.error('Refresh token error:', error);
+        throw { message: 'Invalid or expired token' };
+    }
 }
 
 async function revokeToken({ token, ipAddress }) {
@@ -132,8 +142,14 @@ async function register(params, origin) {
         return { message: "Registration successful! You are now logged in as SuperAdmin." };
     } else {
         // Other users: send verification email
-        await sendVerificationEmail(account, origin);
-        return { message: "Registration successful, please check your email for verification instructions" };
+        try {
+            await sendVerificationEmail(account, origin);
+            return { message: "Registration successful, please check your email for verification instructions" };
+        } catch (error) {
+            console.error('Email verification error:', error);
+            // Still return success but with a different message
+            return { message: "Registration successful! Please contact admin for account activation." };
+        }
     }
 }
 
@@ -261,8 +277,14 @@ async function getAccount(id) {
 }
 
 async function getRefreshToken(token) {
+    if (!token) {
+        throw { message: 'Token is required' };
+    }
+    
     const refreshToken = await db.RefreshToken.findOne({ where: { token } });
-    if (!refreshToken || !refreshToken.isActive) throw 'Invalid token';
+    if (!refreshToken || !refreshToken.isActive) {
+        throw { message: 'Invalid or expired token' };
+    }
     return refreshToken;
 }
 
