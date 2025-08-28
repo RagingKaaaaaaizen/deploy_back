@@ -109,6 +109,26 @@ app.get('/api/dispose-test', (req, res) => {
     });
 });
 
+// Test accounts endpoint without authentication
+app.get('/api/accounts-test', async (req, res) => {
+    try {
+        const accountCount = await db.Account.count();
+        res.json({ 
+            message: 'Accounts test endpoint', 
+            accountCount: accountCount,
+            timestamp: new Date(),
+            status: 'OK'
+        });
+    } catch (error) {
+        console.error('Accounts test error:', error);
+        res.status(500).json({ 
+            message: 'Database error', 
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
         // Global error handler
         app.use(errorHandler);
 
