@@ -99,9 +99,21 @@ function registerSchema(req, res, next) {
 }
 
 function register(req, res, next) {
+    console.log('Registration attempt:', { 
+        email: req.body.email, 
+        origin: req.get('origin'),
+        body: req.body 
+    });
+    
     accountService.register(req.body, req.get('origin'))
-        .then((result) => res.json(result))
-        .catch(next);
+        .then((result) => {
+            console.log('Registration successful:', result);
+            res.json(result);
+        })
+        .catch((error) => {
+            console.error('Registration error:', error);
+            next(error);
+        });
 }
 
 function verifyEmailSchema(req, res, next) {

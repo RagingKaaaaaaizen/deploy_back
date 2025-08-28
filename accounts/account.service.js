@@ -111,12 +111,21 @@ async function revokeToken({ token, ipAddress }) {
 }
 
 async function register(params, origin) {
-    // Normalize email to lowercase
-    params.email = params.email.toLowerCase();
+    try {
+        console.log('Starting registration for:', params.email);
+        
+        // Normalize email to lowercase
+        params.email = params.email.toLowerCase();
 
-    if (await db.Account.findOne({ where: { email: params.email } })) {
-        return await sendAlreadyRegisteredEmail(params.email, origin);
-    }
+        // Check if database is connected
+        if (!db.Account) {
+            throw new Error('Database not initialized');
+        }
+
+        if (await db.Account.findOne({ where: { email: params.email } })) {
+            console.log('Email already registered:', params.email);
+            return await sendAlreadyRegisteredEmail(params.email, origin);
+        }
 
     const account = new db.Account(params);
     const isFirstAccount = (await db.Account.count()) === 0;
@@ -139,6 +148,7 @@ async function register(params, origin) {
     
     if (isFirstAccount) {
         // First user: no email verification needed
+        console.log('First account created as SuperAdmin');
         return { message: "Registration successful! You are now logged in as SuperAdmin." };
     } else {
         // Other users: send verification email
@@ -150,6 +160,10 @@ async function register(params, origin) {
             // Still return success but with a different message
             return { message: "Registration successful! Please contact admin for account activation." };
         }
+    }
+    } catch (error) {
+        console.error('Registration error:', error);
+        throw error;
     }
 }
 
