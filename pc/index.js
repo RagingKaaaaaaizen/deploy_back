@@ -43,9 +43,26 @@ function updateSchema(req, res, next) {
 
 // Controller functions
 function getAll(req, res, next) {
-    pcService.getAll()
-        .then(pcs => res.json(pcs))
-        .catch(next);
+    try {
+        console.log('🔍 PC Controller - getAll called');
+        console.log('🔍 PC Controller - User:', req.user);
+        
+        pcService.getAll()
+            .then(pcs => {
+                console.log('✅ PC Controller - getAll successful, sending', pcs.length, 'PCs');
+                res.json(pcs);
+            })
+            .catch(error => {
+                console.error('❌ PC Controller - Error in getAll:', error);
+                console.error('❌ PC Controller - Error message:', error.message);
+                console.error('❌ PC Controller - Error stack:', error.stack);
+                next(error);
+            });
+    } catch (error) {
+        console.error('❌ PC Controller - Unexpected error in getAll function:', error);
+        console.error('❌ PC Controller - Error stack:', error.stack);
+        next(error);
+    }
 }
 
 function getById(req, res, next) {
@@ -55,9 +72,28 @@ function getById(req, res, next) {
 }
 
 function create(req, res, next) {
-    pcService.create(req.body, req.user.id)
-        .then(pc => res.json(pc))
-        .catch(next);
+    try {
+        console.log('🔍 PC Controller - create called');
+        console.log('🔍 PC Controller - Request body:', req.body);
+        console.log('🔍 PC Controller - User ID:', req.user.id);
+        console.log('🔍 PC Controller - User object:', req.user);
+        
+        pcService.create(req.body, req.user.id)
+            .then(pc => {
+                console.log('✅ PC Controller - PC created successfully:', pc);
+                res.json(pc);
+            })
+            .catch(error => {
+                console.error('❌ PC Controller - Error creating PC:', error);
+                console.error('❌ PC Controller - Error message:', error.message);
+                console.error('❌ PC Controller - Error stack:', error.stack);
+                next(error);
+            });
+    } catch (error) {
+        console.error('❌ PC Controller - Unexpected error in create function:', error);
+        console.error('❌ PC Controller - Error stack:', error.stack);
+        next(error);
+    }
 }
 
 function update(req, res, next) {

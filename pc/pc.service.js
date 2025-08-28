@@ -11,9 +11,23 @@ module.exports = {
 
 // Get all PCs with room location
 async function getAll() {
-    return await db.PC.scope('withAssociations').findAll({
-        order: [['createdAt', 'DESC']]
-    });
+    try {
+        console.log('🔍 PC Service - getAll called');
+        console.log('🔍 PC Service - db.PC available:', !!db.PC);
+        
+        const pcs = await db.PC.scope('withAssociations').findAll({
+            order: [['createdAt', 'DESC']]
+        });
+        
+        console.log('✅ PC Service - getAll successful, found', pcs.length, 'PCs');
+        console.log('🔍 PC Service - PCs data:', pcs.map(pc => ({ id: pc.id, name: pc.name, roomLocationId: pc.roomLocationId })));
+        
+        return pcs;
+    } catch (error) {
+        console.error('❌ PC Service - Error in getAll function:', error);
+        console.error('❌ PC Service - Error stack:', error.stack);
+        throw error;
+    }
 }
 
 // Get single PC by ID
@@ -23,22 +37,45 @@ async function getById(id) {
 
 // Create new PC
 async function create(params, userId) {
-    // Validate room location exists
-    const roomLocation = await db.RoomLocation.findByPk(params.roomLocationId);
-    if (!roomLocation) throw 'Room location not found';
+    try {
+        console.log('🔍 PC Service - create called with params:', params);
+        console.log('🔍 PC Service - userId:', userId);
+        
+        // Validate room location exists
+        console.log('🔍 PC Service - Checking room location with ID:', params.roomLocationId);
+        const roomLocation = await db.RoomLocation.findByPk(params.roomLocationId);
+        console.log('🔍 PC Service - Room location found:', roomLocation);
+        
+        if (!roomLocation) {
+            console.error('❌ PC Service - Room location not found for ID:', params.roomLocationId);
+            throw 'Room location not found';
+        }
 
-    // Check for duplicate serial number if provided
-    if (params.serialNumber) {
-        const existing = await db.PC.findOne({ where: { serialNumber: params.serialNumber } });
-        if (existing) throw 'PC with this serial number already exists';
+        // Check for duplicate serial number if provided
+        if (params.serialNumber) {
+            console.log('🔍 PC Service - Checking for duplicate serial number:', params.serialNumber);
+            const existing = await db.PC.findOne({ where: { serialNumber: params.serialNumber } });
+            if (existing) {
+                console.error('❌ PC Service - PC with serial number already exists:', params.serialNumber);
+                throw 'PC with this serial number already exists';
+            }
+        }
+
+        console.log('🔍 PC Service - Creating PC with data:', { ...params, createdBy: userId });
+        const pc = await db.PC.create({
+            ...params,
+            createdBy: userId
+        });
+        console.log('✅ PC Service - PC created successfully with ID:', pc.id);
+
+        const result = await getPC(pc.id);
+        console.log('✅ PC Service - Returning PC with associations:', result);
+        return result;
+    } catch (error) {
+        console.error('❌ PC Service - Error in create function:', error);
+        console.error('❌ PC Service - Error stack:', error.stack);
+        throw error;
     }
-
-    const pc = await db.PC.create({
-        ...params,
-        createdBy: userId
-    });
-
-    return await getPC(pc.id);
 }
 
 // Update PC
@@ -98,7 +135,23 @@ async function getSpecificationFields(categoryId) {
 
 // Helper function
 async function getPC(id) {
-    const pc = await db.PC.scope('withAssociations').findByPk(id);
-    if (!pc) throw 'PC not found';
-    return pc;
+    try {
+        console.log('🔍 PC Service - getPC called with ID:', id);
+        console.log('🔍 PC Service - db.PC available:', !!db.PC);
+        
+        const pc = await db.PC.scope('withAssociations').findByPk(id);
+        console.log('🔍 PC Service - PC found:', pc ? { id: pc.id, name: pc.name } : 'null');
+        
+        if (!pc) {
+            console.error('❌ PC Service - PC not found with ID:', id);
+            throw 'PC not found';
+        }
+        
+        console.log('✅ PC Service - getPC successful for ID:', id);
+        return pc;
+    } catch (error) {
+        console.error('❌ PC Service - Error in getPC function:', error);
+        console.error('❌ PC Service - Error stack:', error.stack);
+        throw error;
+    }
 } 
