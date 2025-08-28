@@ -108,6 +108,12 @@ function register(req, res, next) {
     accountService.register(req.body, req.get('origin'))
         .then((result) => {
             console.log('Registration successful:', result);
+            
+            // If registration includes tokens, set the refresh token cookie
+            if (result.refreshToken) {
+                setTokenCookie(res, result.refreshToken);
+            }
+            
             res.json(result);
         })
         .catch((error) => {

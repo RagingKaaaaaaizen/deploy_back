@@ -147,9 +147,20 @@ async function register(params, origin) {
     await account.save();
     
     if (isFirstAccount) {
-        // First user: no email verification needed
+        // First user: no email verification needed, but return authentication tokens
         console.log('First account created as SuperAdmin');
-        return { message: "Registration successful! You are now logged in as SuperAdmin." };
+        
+        // Generate authentication tokens for immediate login
+        const jwtToken = generateJwtToken(account);
+        const refreshToken = generateRefreshToken(account, '127.0.0.1'); // Default IP for first user
+        await refreshToken.save();
+        
+        return { 
+            message: "Registration successful! You are now logged in as SuperAdmin.",
+            jwtToken,
+            refreshToken: refreshToken.token,
+            account: basicDetails(account)
+        };
     } else {
         // Other users: send verification email
         try {
