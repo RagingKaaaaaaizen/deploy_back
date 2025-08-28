@@ -24,6 +24,16 @@ async function startServer() {
             checkDb();
         });
 
+        // Fix dispose table schema if needed
+        try {
+            const { fixDisposeSchema } = require('./fix-dispose-schema');
+            await fixDisposeSchema();
+            console.log('✅ Dispose schema fix completed');
+        } catch (error) {
+            console.error('⚠️ Dispose schema fix failed:', error.message);
+            // Continue server startup even if schema fix fails
+        }
+
         app.use(bodyParser.urlencoded({ extended: false }));
         app.use(bodyParser.json());
         app.use(cookieParser());
