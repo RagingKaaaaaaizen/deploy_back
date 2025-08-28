@@ -26,7 +26,13 @@ async function getAll() {
                 ]
             },
             { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] },
-            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] },
+            { 
+                model: db.Dispose, 
+                as: 'disposal', 
+                attributes: ['id', 'quantity', 'disposalValue', 'reason', 'disposalDate', 'returnedToStock', 'returnedAt', 'returnedBy'],
+                required: false // Left join to include disposal info if available
+            }
         ],
         order: [['createdAt', 'DESC']]
     });
