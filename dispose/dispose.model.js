@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                min: 1
+                min: 0
             }
         },
         disposalValue: {
@@ -54,6 +54,29 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'accounts',
                 key: 'id'
             }
+        },
+        returnedToStock: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
+        },
+        returnedAt: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        returnedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'accounts',
+                key: 'id'
+            }
+        },
+        sourceStockId: {
+            type: DataTypes.INTEGER,
+            allowNull: true
+            // Removed foreign key constraint to avoid circular dependency
+            // We'll handle the relationship in the application logic
         }
     }, {
         tableName: 'disposes',

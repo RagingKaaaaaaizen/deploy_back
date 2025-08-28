@@ -10,27 +10,46 @@ module.exports = {
     getAvailableStock
 };
 
-// Get all stock logs (include item + location)
+// Get all stock logs (include complete item + location info)
 async function getAll() {
     return await db.Stock.findAll({
+        // Temporarily removed quantity filter to debug returned items
+        attributes: ['id', 'itemId', 'quantity', 'price', 'totalPrice', 'locationId', 'remarks', 'disposeId', 'createdAt', 'createdBy'],
         include: [
             { 
                 model: db.Item, 
                 as: 'item', 
-                attributes: ['id', 'name'],
+                attributes: ['id', 'name', 'description'],
                 include: [
                     { model: db.Category, as: 'category', attributes: ['id', 'name'] },
                     { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
                 ]
             },
-            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name'] }
-        ]
+            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] },
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        ],
+        order: [['createdAt', 'DESC']]
     });
 }
 
-// Get single stock log
+// Get single stock log with complete information
 async function getById(id) {
-    return await getStock(id);
+    return await db.Stock.findByPk(id, {
+        attributes: ['id', 'itemId', 'quantity', 'price', 'totalPrice', 'locationId', 'remarks', 'disposeId', 'createdAt', 'createdBy'],
+        include: [
+            { 
+                model: db.Item, 
+                as: 'item', 
+                attributes: ['id', 'name', 'description'],
+                include: [
+                    { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                    { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                ]
+            },
+            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] },
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        ]
+    });
 }
 
 // Create new stock log
@@ -53,21 +72,32 @@ async function create(params, userId) {
     
     // Log activity after successful stock creation
     try {
-        const item = await db.Item.findByPk(params.itemId);
+        const item = await db.Item.findByPk(params.itemId, {
+            include: [
+                { model: db.Category, as: 'category', attributes: ['name'] },
+                { model: db.Brand, as: 'brand', attributes: ['name'] }
+            ]
+        });
         const location = await db.StorageLocation.findByPk(params.locationId);
+        const user = await db.Account.findByPk(userId);
         
         await activityLogService.logActivity({
-            userId: params.createdBy,
+            userId: userId,
             action: 'ADD_STOCK',
             entityType: 'STOCK',
             entityId: stock.id,
-            entityName: `Added ${params.quantity} units of ${item.name} to ${location.name}`,
+            entityName: `Added ${params.quantity} units of ${item.name} (${item.brand.name} - ${item.category.name}) to ${location.name}`,
             details: { 
                 itemId: params.itemId,
+                itemName: item.name,
+                categoryName: item.category.name,
+                brandName: item.brand.name,
                 locationId: params.locationId,
+                locationName: location.name,
                 quantity: params.quantity,
                 price: params.price,
-                totalPrice: totalPrice
+                totalPrice: totalPrice,
+                createdBy: user ? `${user.firstName} ${user.lastName}` : 'Unknown User'
             }
         });
     } catch (error) {
@@ -94,64 +124,46 @@ async function _delete(id) {
     await stock.destroy();
 }
 
-// Get available stock for an item
-async function getAvailableStock(itemId) {
-    const stockLogs = await db.Stock.findAll({
-        where: { itemId },
-        include: [
-            { 
-                model: db.Item, 
-                as: 'item', 
-                attributes: ['id', 'name'],
-                include: [
-                    { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                    { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                ]
-            },
-            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name'] }
-        ]
-    });
-
-    // Calculate available stock
-    let availableStock = 0;
-    stockLogs.forEach(entry => {
-        if (entry.disposeId) {
-            // This is a disposal entry
-            availableStock -= entry.quantity;
-        } else {
-            // This is an addition entry
-            availableStock += entry.quantity;
-        }
-    });
-
-    // Ensure stock doesn't go negative
-    availableStock = Math.max(0, availableStock);
-
-    return {
-        itemId,
-        availableStock,
-        stockLogs,
-        totalAdded: stockLogs.filter(s => !s.disposeId).reduce((sum, s) => sum + s.quantity, 0),
-        totalDisposed: stockLogs.filter(s => s.disposeId).reduce((sum, s) => sum + s.quantity, 0)
-    };
-}
-
-// Helper
+// Helper function to get stock by id
 async function getStock(id) {
-    const stock = await db.Stock.findByPk(id, {
-        include: [
-            { 
-                model: db.Item, 
-                as: 'item', 
-                attributes: ['id', 'name'],
-                include: [
-                    { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                    { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                ]
-            },
-            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name'] }
-        ]
-    });
+    const stock = await db.Stock.findByPk(id);
     if (!stock) throw 'Stock not found';
     return stock;
+}
+
+// Get available stock for an item
+async function getAvailableStock(itemId) {
+    const stocks = await db.Stock.findAll({
+        where: { itemId: itemId },
+        include: [
+            { model: db.Item, as: 'item', attributes: ['id', 'name'] },
+            { model: db.StorageLocation, as: 'location', attributes: ['id', 'name'] }
+        ]
+    });
+
+    let totalAvailable = 0;
+    const stockDetails = [];
+
+    for (const stock of stocks) {
+        // Only skip stock entries that have been fully disposed (quantity = 0)
+        // Allow partial disposals to be included in available stock
+        if (stock.quantity <= 0) {
+            continue;
+        }
+
+        totalAvailable += stock.quantity;
+        stockDetails.push({
+            id: stock.id,
+            quantity: stock.quantity,
+            price: stock.price,
+            location: stock.location.name,
+            remarks: stock.remarks,
+            createdAt: stock.createdAt
+        });
+    }
+
+    return {
+        totalAvailable,
+        stockDetails
+    };
 }

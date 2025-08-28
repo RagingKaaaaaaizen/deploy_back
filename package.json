@@ -4,8 +4,10 @@
     "description": "NodeJS and MySQL API for Email Sign Up with Verification, Authentication & Forgot Password",
     "license": "MIT",
     "scripts": {
-        "start": "node ./server.js",
-        "start:dev": "nodemon ./server.js"
+        "start": "NODE_ENV=production node ./server.js",
+        "start:dev": "nodemon ./server.js",
+        "build": "echo 'No build step required for Node.js'",
+        "postinstall": "echo 'Post-install complete'"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",

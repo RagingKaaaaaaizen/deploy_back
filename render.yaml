@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: computer-lab-inventory-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        value: 153.92.15.31
+      - key: DB_PORT
+        value: 3306
+      - key: DB_USER
+        value: u875409848_vilar
+      - key: DB_PASSWORD
+        value: 6xw;kmmXC$
+      - key: DB_NAME
+        value: u875409848_vilar
+      - key: JWT_SECRET
+        value: 4b7d938d321573661743c5483f476143b2593e938d2b76e97ef7b12041f80c772d00b021455836bbd7e0bf740b50bc074af4e7ffdc3a3e83487a07e79e7f722b
+      - key: EMAIL_FROM
+        value: noreply@computerlabinventory.com
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

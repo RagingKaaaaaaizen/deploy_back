@@ -1,6 +1,10 @@
 const { expressjwt: jwt } = require('express-jwt');
 
-const config = require('../config.json'); 
+// Use centralized JWT configuration
+const JWT_CONFIG = require('../jwt-config');
+const config = {
+    secret: JWT_CONFIG.SECRET
+};
 const db = require('../_helpers/db');
 
 module.exports = authorize;

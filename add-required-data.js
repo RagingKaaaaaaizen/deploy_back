@@ -1,4 +1,13 @@
-const config = require('./config.json');
+// Use environment variables for production, fallback to config.json for development
+const config = {
+    database: {
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || "root",
+        password: process.env.DB_PASSWORD || "1234",
+        database: process.env.DB_NAME || "amp"
+    }
+};
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 

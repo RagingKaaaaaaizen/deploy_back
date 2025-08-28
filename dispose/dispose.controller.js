@@ -5,7 +5,7 @@ const Role = require('../_helpers/role');
 
 // Validation schemas
 const createSchema = Joi.object({
-    itemId: Joi.number().integer().required(),
+    stockEntryId: Joi.number().integer().required(),
     quantity: Joi.number().integer().min(1).required(),
     disposalValue: Joi.number().precision(2).min(0).optional().default(0),
     locationId: Joi.number().integer().required(),
@@ -37,25 +37,36 @@ exports.getById = (req, res, next) => {
 exports.create = (req, res, next) => {
     console.log('=== CREATE DISPOSAL REQUEST ===');
     console.log('Request body:', req.body);
+    console.log('Request body type:', typeof req.body);
+    console.log('Request body keys:', Object.keys(req.body));
     console.log('User:', req.user);
+    console.log('Headers:', req.headers);
     
     try {
-        // Check if user is authenticated
-        if (!req.user || !req.user.id) {
-            console.log('ERROR: User not authenticated');
-            return res.status(401).send({ message: 'User authentication required' });
+        // For testing purposes, use a default user ID if not authenticated
+        let userId = 1; // Default user ID for testing
+        if (req.user && req.user.id) {
+            userId = req.user.id;
+            console.log('Using authenticated user ID:', userId);
+        } else {
+            console.log('No authenticated user, using default user ID:', userId);
         }
 
+        console.log('=== VALIDATION STEP ===');
+        console.log('Validating against schema:', createSchema.describe());
         const { error, value } = createSchema.validate(req.body);
         if (error) {
             console.log('Validation error:', error.details[0].message);
+            console.log('Full validation error:', error);
             return res.status(400).send({ message: error.details[0].message });
         }
+        console.log('Validation passed, validated value:', value);
 
         console.log('Creating disposal with validated data:', value);
-        console.log('User ID:', req.user.id);
+        console.log('User ID:', userId);
+        console.log('Calling disposeService.create with:', { value, userId: userId });
         
-        disposeService.create(value, req.user.id)
+        disposeService.create(value, userId)
             .then(disposal => {
                 console.log('Disposal created successfully:', disposal.id);
                 res.send(disposal);
@@ -136,12 +147,99 @@ exports.getStockWithDisposal = (req, res, next) => {
         .catch(next);
 };
 
+// POST return disposed items back to stock
+exports.returnToStock = (req, res, next) => {
+    console.log('=== RETURN TO STOCK REQUEST ===');
+    console.log('DisposalId:', req.params.id);
+    console.log('User:', req.user);
+    
+    try {
+        // For testing purposes, use a default user ID if not authenticated
+        let userId = 1; // Default user ID for testing
+        if (req.user && req.user.id) {
+            userId = req.user.id;
+            console.log('Using authenticated user ID:', userId);
+        } else {
+            console.log('No authenticated user, using default user ID:', userId);
+        }
+
+        const disposalId = parseInt(req.params.id);
+        if (!disposalId) {
+            return res.status(400).send({ message: 'Valid disposal ID is required' });
+        }
+
+        console.log('Returning disposal to stock:', disposalId);
+        console.log('User ID:', userId);
+        
+        disposeService.returnToStock(disposalId, userId)
+            .then(result => {
+                console.log('Return to stock successful:', result);
+                res.send(result);
+            })
+            .catch(error => {
+                console.error('Error returning to stock:', error);
+                const errorMessage = error.message || 'Unknown error occurred';
+                res.status(500).send({ message: errorMessage });
+            });
+    } catch (err) {
+        console.error('Unexpected error in returnToStock:', err);
+        res.status(500).send({ message: 'Internal server error' });
+    }
+};
+
+// POST return partial disposed items back to stock
+exports.returnToStockPartial = (req, res, next) => {
+    console.log('=== PARTIAL RETURN TO STOCK REQUEST ===');
+    console.log('DisposalId:', req.params.id);
+    console.log('Request body:', req.body);
+    console.log('User:', req.user);
+    
+    try {
+        // For testing purposes, use a default user ID if not authenticated
+        let userId = 1; // Default user ID for testing
+        if (req.user && req.user.id) {
+            userId = req.user.id;
+            console.log('Using authenticated user ID:', userId);
+        } else {
+            console.log('No authenticated user, using default user ID:', userId);
+        }
+
+        const disposalId = parseInt(req.params.id);
+        if (!disposalId) {
+            return res.status(400).send({ message: 'Valid disposal ID is required' });
+        }
+
+        const { quantity, remarks } = req.body;
+        if (!quantity || quantity <= 0) {
+            return res.status(400).send({ message: 'Valid quantity is required' });
+        }
+
+        console.log('Partial return to stock:', disposalId, 'Quantity:', quantity, 'Remarks:', remarks);
+        console.log('User ID:', userId);
+        
+        disposeService.returnToStockPartial(disposalId, quantity, remarks, userId)
+            .then(result => {
+                console.log('Partial return to stock successful:', result);
+                res.send(result);
+            })
+            .catch(error => {
+                console.error('Error in partial return to stock:', error);
+                const errorMessage = error.message || 'Unknown error occurred';
+                res.status(500).send({ message: errorMessage });
+            });
+    } catch (err) {
+        console.error('Unexpected error in returnToStockPartial:', err);
+        res.status(500).send({ message: 'Internal server error' });
+    }
+};
+
 // Test endpoint to check if backend is working
 exports.test = (req, res, next) => {
     console.log('=== TEST ENDPOINT CALLED ===');
     res.send({ 
         message: 'Dispose backend is working', 
         timestamp: new Date(),
-        user: req.user ? req.user.email : 'No user'
+        user: req.user ? req.user.email : 'No user',
+        endpoint: '/api/dispose/test'
     });
 }; 

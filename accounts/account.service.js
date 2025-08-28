@@ -2,7 +2,20 @@ const db = require('../_helpers/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const config = require('../config.json');
+// Use environment variables for production, fallback to config.json for development
+const JWT_CONFIG = require('../jwt-config');
+const config = {
+    secret: JWT_CONFIG.SECRET,
+    emailFrom: process.env.EMAIL_FROM || "info@node-mysql-signup-verification-api.com",
+    smtpOptions: {
+        host: process.env.SMTP_HOST || "smtp.ethereal.email",
+        port: process.env.SMTP_PORT || 587,
+        auth: {
+            user: process.env.SMTP_USER || "annie.parker0@ethereal.email",
+            pass: process.env.SMTP_PASS || "fnyCSJGPbHW1hHaPGQ"
+        }
+    }
+};
 const { Op } = require('sequelize');
 const sendEmail = require('../_helpers/send-email');
 const Role = require('../_helpers/role');

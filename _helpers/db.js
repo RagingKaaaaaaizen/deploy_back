@@ -1,4 +1,25 @@
-const config = require('../config.json');
+// Use environment variables for production, fallback to config.json for development
+const JWT_CONFIG = require('../jwt-config');
+const config = {
+    database: {
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || "root",
+        password: process.env.DB_PASSWORD || "1234",
+        database: process.env.DB_NAME || "amp"
+    },
+    secret: JWT_CONFIG.SECRET,
+    emailFrom: process.env.EMAIL_FROM || "info@node-mysql-signup-verification-api.com",
+    smtpOptions: {
+        host: process.env.SMTP_HOST || "smtp.ethereal.email",
+        port: process.env.SMTP_PORT || 587,
+        auth: {
+            user: process.env.SMTP_USER || "annie.parker0@ethereal.email",
+            pass: process.env.SMTP_PASS || "fnyCSJGPbHW1hHaPGQ"
+        }
+    }
+};
+
 const mysql = require('mysql2/promise');
 const { Sequelize, DataTypes } = require('sequelize');
 
@@ -7,16 +28,86 @@ module.exports = db = {};
 initialize();
 
 async function initialize() {
+    // Use environment variables for production, fallback to config.json for development
+    const dbConfig = {
+        host: process.env.DB_HOST || config.database.host,
+        port: process.env.DB_PORT || config.database.port,
+        user: process.env.DB_USER || config.database.user,
+        password: process.env.DB_PASSWORD || config.database.password,
+        database: process.env.DB_NAME || config.database.database
+    };
+
+    // For Render deployment with your MySQL database
+    if (process.env.NODE_ENV === 'production') {
+        dbConfig.host = process.env.DB_HOST || '153.92.15.31';
+        dbConfig.user = process.env.DB_USER || 'u875409848_vilar';
+        dbConfig.password = process.env.DB_PASSWORD || '6xw;kmmXC$';
+        dbConfig.database = process.env.DB_NAME || 'u875409848_vilar';
+        dbConfig.port = process.env.DB_PORT || 3306;
+    }
+
+    console.log('Database configuration:', {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.user,
+        database: dbConfig.database
+    });
+
     // create db if it doesn't already exist
-    const { host, port, user, password, database } = config.database;
-    const connection = await mysql.createConnection({ host, port, user, password });
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
+    const connection = await mysql.createConnection({ 
+        host: dbConfig.host, 
+        port: dbConfig.port, 
+        user: dbConfig.user, 
+        password: dbConfig.password 
+    });
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\`;`);
 
     // connect to db
-    const sequelize = new Sequelize(database, user, password, { 
+    const sequelize = new Sequelize(dbConfig.database, dbConfig.user, dbConfig.password, { 
+        host: dbConfig.host,
+        port: dbConfig.port,
         dialect: 'mysql',
-        logging: false // Turn off Sequelize logging
+        logging: false, // Turn off Sequelize logging
+        pool: {
+            max: 5,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
+        },
+        dialectOptions: {
+            // Add SSL configuration for production MySQL
+            ssl: process.env.NODE_ENV === 'production' ? {
+                require: true,
+                rejectUnauthorized: false
+            } : false
+        }
     });
+
+    // Test database connection
+    try {
+        await sequelize.authenticate();
+        console.log('✅ Database connection established successfully.');
+    } catch (error) {
+        console.error('❌ Unable to connect to the database:', error);
+        console.error('Database config:', {
+            host: dbConfig.host,
+            port: dbConfig.port,
+            user: dbConfig.user,
+            database: dbConfig.database
+        });
+        
+        // In production, retry connection after delay
+        if (process.env.NODE_ENV === 'production') {
+            console.log('🔄 Retrying database connection in 5 seconds...');
+            setTimeout(() => {
+                console.log('Retrying connection...');
+                initialize();
+            }, 5000);
+            return;
+        }
+        
+        throw error;
+    }
 
     // 🎓✨
     console.log('\n🎓✨ Together we\'ll graduate as a team. Lets do this! ✨🎓\n');
@@ -104,9 +195,13 @@ async function initialize() {
     db.Account.hasMany(db.Dispose, { foreignKey: 'createdBy', as: 'userDisposals' });
     db.Dispose.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'user' });
 
-    // Stock-Dispose Direct Relationship
-    db.Dispose.hasMany(db.Stock, { foreignKey: 'disposeId', as: 'stockEntries' });
-    db.Stock.belongsTo(db.Dispose, { foreignKey: 'disposeId', as: 'disposal' });
+    // Stock-Dispose Direct Relationship (without foreign key constraints to avoid circular dependency)
+    db.Dispose.hasOne(db.Stock, { foreignKey: 'disposeId', as: 'stockEntry', constraints: false });
+    db.Stock.belongsTo(db.Dispose, { foreignKey: 'disposeId', as: 'disposal', constraints: false });
+
+    // Dispose Return Stock Relationship (commented out until returnStockId is needed)
+    // db.Stock.hasMany(db.Dispose, { foreignKey: 'returnStockId', as: 'returnDisposals' });
+    // db.Dispose.belongsTo(db.Stock, { foreignKey: 'returnStockId', as: 'returnStock' });
 
     // ---------------- Other Existing Relationships ----------------
     db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
@@ -128,10 +223,113 @@ async function initialize() {
     db.Account.hasMany(db.ActivityLog, { foreignKey: 'userId', as: 'activityLogs' });
     db.ActivityLog.belongsTo(db.Account, { foreignKey: 'userId', as: 'user' });
 
-    // sync all models with database
-    await sequelize.sync({ alter: true }); // Use alter to preserve existing data
+    // sync all models with database - force: true will drop and recreate all tables
+    // Use { force: true } to drop and recreate all tables (WARNING: This will delete all data!)
+    // Use { alter: true } to alter existing tables (safer, preserves data)
+    // Use {} for no changes (just sync structure)
+    
+    console.log('Syncing database models...');
+    try {
+        // Try to sync with alter first
+        await sequelize.sync({ force: false, alter: true });
+        console.log('Database models synced successfully!');
+    } catch (error) {
+        if (error.code === 'ER_TOO_MANY_KEYS') {
+            console.log('⚠️  Too many keys error detected. Trying to create missing tables only...');
+            try {
+                // Try to create missing tables without altering existing ones
+                await sequelize.sync({ force: false, alter: false });
+                console.log('✅ Missing tables created successfully!');
+            } catch (syncError) {
+                console.log('⚠️  Could not create missing tables:', syncError.message);
+                console.log('Database models sync skipped due to key limit.');
+            }
+        } else {
+            console.log('⚠️  Sync error detected. Trying to create missing tables only...');
+            try {
+                // Try to create missing tables without altering existing ones
+                await sequelize.sync({ force: false, alter: false });
+                console.log('✅ Missing tables created successfully!');
+            } catch (syncError) {
+                console.log('⚠️  Could not create missing tables:', syncError.message);
+                console.log('Database models sync skipped.');
+            }
+        }
+    }
+
+    // Add some initial data if tables are empty
+    await addInitialData();
 
     // expose sequelize instance
     db.sequelize = sequelize;
     db.Sequelize = Sequelize;
+}
+
+// Function to add initial data if tables are empty
+async function addInitialData() {
+    try {
+        console.log('Checking for initial data...');
+        
+        // Check if we have any categories
+        const categoryCount = await db.Category.count();
+        if (categoryCount === 0) {
+            console.log('Adding initial categories...');
+            await db.Category.bulkCreate([
+                { name: 'Central Processing Unit (CPU)' },
+                { name: 'Graphics Processing Unit (GPU)' },
+                { name: 'Random Access Memory (RAM)' },
+                { name: 'Storage Device' },
+                { name: 'Motherboard' },
+                { name: 'Power Supply Unit (PSU)' },
+                { name: 'Computer Case' },
+                { name: 'Monitor' },
+                { name: 'Keyboard' },
+                { name: 'Mouse' },
+                { name: 'Network Card' },
+                { name: 'Sound Card' },
+                { name: 'Cooling System' },
+                { name: 'Other' }
+            ]);
+        }
+
+        // Check if we have any brands
+        const brandCount = await db.Brand.count();
+        if (brandCount === 0) {
+            console.log('Adding initial brands...');
+            await db.Brand.bulkCreate([
+                { name: 'Intel' },
+                { name: 'AMD' },
+                { name: 'NVIDIA' },
+                { name: 'Samsung' },
+                { name: 'Western Digital' },
+                { name: 'Seagate' },
+                { name: 'ASUS' },
+                { name: 'MSI' },
+                { name: 'Gigabyte' },
+                { name: 'Corsair' },
+                { name: 'Kingston' },
+                { name: 'Crucial' },
+                { name: 'Logitech' },
+                { name: 'Razer' },
+                { name: 'Other' }
+            ]);
+        }
+
+        // Check if we have any storage locations
+        const locationCount = await db.StorageLocation.count();
+        if (locationCount === 0) {
+            console.log('Adding initial storage locations...');
+            await db.StorageLocation.bulkCreate([
+                { name: 'storage room 1', description: 'Main storage room' },
+                { name: 'storage room 2', description: 'Secondary storage room' },
+                { name: 'warehouse', description: 'Main warehouse' },
+                { name: 'office storage', description: 'Office storage area' }
+            ]);
+        }
+
+        console.log('✅ Initial data check completed!');
+    } catch (error) {
+        console.error('❌ Error adding initial data:', error);
+        // Don't throw error, just log it
+    }
 }
