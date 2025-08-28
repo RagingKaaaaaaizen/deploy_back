@@ -122,14 +122,9 @@ async function create(params, userId) {
             createdBy: Number(userId) // Ensure userId is a number
         };
 
-        // Add optional columns if they exist in the schema
-        // These will be added by the schema fix script
-        if (db.Dispose.rawAttributes.disposalValue) {
-            disposalData.disposalValue = Number(disposalValue);
-        }
-        if (db.Dispose.rawAttributes.sourceStockId) {
-            disposalData.sourceStockId = Number(params.stockEntryId);
-        }
+        // Add all required columns
+        disposalData.disposalValue = Number(disposalValue);
+        disposalData.sourceStockId = Number(params.stockEntryId);
 
         console.log('Creating disposal with data:', disposalData);
         console.log('Stock entry itemId:', stockEntry.itemId);

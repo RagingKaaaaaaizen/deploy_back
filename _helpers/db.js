@@ -230,31 +230,49 @@ async function initialize() {
     
     console.log('Syncing database models...');
     try {
-        // Try to sync with alter first
-        await sequelize.sync({ force: false, alter: true });
+        // First try to sync without altering existing tables
+        await sequelize.sync({ force: false, alter: false });
         console.log('Database models synced successfully!');
     } catch (error) {
-        if (error.code === 'ER_TOO_MANY_KEYS') {
-            console.log('⚠️  Too many keys error detected. Trying to create missing tables only...');
+        console.log('⚠️  Sync error detected:', error.message);
+        
+        if (error.message.includes('disposes') || error.message.includes('Foreign key constraint')) {
+            console.log('🔧 Attempting to create disposes table manually...');
             try {
-                // Try to create missing tables without altering existing ones
-                await sequelize.sync({ force: false, alter: false });
-                console.log('✅ Missing tables created successfully!');
-            } catch (syncError) {
-                console.log('⚠️  Could not create missing tables:', syncError.message);
-                console.log('Database models sync skipped due to key limit.');
-            }
-        } else {
-            console.log('⚠️  Sync error detected. Trying to create missing tables only...');
-            try {
-                // Try to create missing tables without altering existing ones
-                await sequelize.sync({ force: false, alter: false });
-                console.log('✅ Missing tables created successfully!');
-            } catch (syncError) {
-                console.log('⚠️  Could not create missing tables:', syncError.message);
-                console.log('Database models sync skipped.');
+                // Create disposes table manually without foreign key constraints
+                await sequelize.query(`
+                    CREATE TABLE IF NOT EXISTS disposes (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        itemId INT NOT NULL,
+                        quantity INT NOT NULL,
+                        disposalValue DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                        totalValue DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                        locationId INT NOT NULL,
+                        reason TEXT,
+                        disposalDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        createdBy INT NOT NULL,
+                        returnedToStock BOOLEAN NOT NULL DEFAULT FALSE,
+                        returnedAt DATETIME NULL,
+                        returnedBy INT NULL,
+                        sourceStockId INT NULL,
+                        returnStockId INT NULL,
+                        createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        
+                        INDEX idx_itemId (itemId),
+                        INDEX idx_locationId (locationId),
+                        INDEX idx_createdBy (createdBy),
+                        INDEX idx_disposalDate (disposalDate),
+                        INDEX idx_returnedToStock (returnedToStock)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                `);
+                console.log('✅ disposes table created successfully!');
+            } catch (createError) {
+                console.log('⚠️  Could not create disposes table:', createError.message);
             }
         }
+        
+        console.log('Database models sync completed with manual fixes.');
     }
 
     // Add some initial data if tables are empty
