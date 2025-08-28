@@ -21,6 +21,7 @@ function model(sequelize) {
 
     const options = {
         timestamps: true,
+        tableName: 'roomLocations',
         scopes: {
             withAssociations: {
                 include: [

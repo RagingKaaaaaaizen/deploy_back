@@ -25,6 +25,7 @@ function model(sequelize) {
 
     const options = {
         timestamps: true,
+        tableName: 'PCs',
         scopes: {
             withAssociations: {
                 include: [

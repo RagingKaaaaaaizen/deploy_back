@@ -276,14 +276,57 @@ async function initialize() {
         if (error.message.includes('pcs_room_fk') || error.message.includes('roomLocationId')) {
             console.log('🔧 Attempting to fix PC foreign key constraints...');
             try {
+                // First, ensure roomLocations table exists and has data
+                console.log('🔧 Ensuring roomLocations table exists...');
+                await sequelize.query(`
+                    CREATE TABLE IF NOT EXISTS roomLocations (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        roomNumber VARCHAR(50),
+                        capacity INT,
+                        status ENUM('Active', 'Inactive', 'Maintenance') DEFAULT 'Active',
+                        createdBy INT,
+                        createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                `);
+                console.log('✅ roomLocations table created/verified successfully!');
+                
+                // Insert default room locations if they don't exist
+                console.log('🔧 Inserting default room locations...');
+                await sequelize.query(`
+                    INSERT IGNORE INTO roomLocations (id, name, description, roomNumber, capacity, status, createdBy) VALUES
+                    (1, 'Computer Lab inventory System Front', 'Front area of the computer lab', '101', 30, 'Active', 1),
+                    (2, 'Computer Lab Back', 'Back area of the computer lab', '102', 25, 'Active', 1),
+                    (3, 'Server Room', 'Server and networking equipment room', '103', 10, 'Active', 1),
+                    (4, 'Training Room', 'Training and presentation room', '104', 20, 'Active', 1)
+                `);
+                console.log('✅ Default room locations inserted successfully!');
+                
                 // Drop the problematic foreign key constraint if it exists
                 await sequelize.query(`
                     ALTER TABLE PCs 
                     DROP FOREIGN KEY IF EXISTS pcs_room_fk
                 `);
                 console.log('✅ PC foreign key constraint dropped successfully!');
+                
+                // Also try to drop any other PC-related foreign key constraints
+                await sequelize.query(`
+                    ALTER TABLE PCs 
+                    DROP FOREIGN KEY IF EXISTS PCs_roomLocationId_fkey
+                `);
+                console.log('✅ Additional PC foreign key constraint dropped successfully!');
+                
+                // Try to sync again after dropping constraints
+                try {
+                    await sequelize.sync({ force: false, alter: false });
+                    console.log('✅ Database models synced successfully after constraint fix!');
+                } catch (retryError) {
+                    console.log('⚠️  Retry sync still failed:', retryError.message);
+                }
             } catch (fkError) {
-                console.log('⚠️  Could not drop PC foreign key constraint:', fkError.message);
+                console.log('⚠️  Could not fix PC foreign key constraint:', fkError.message);
             }
         }
         
