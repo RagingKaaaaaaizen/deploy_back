@@ -272,6 +272,21 @@ async function initialize() {
             }
         }
         
+        // Handle PC foreign key constraint issues
+        if (error.message.includes('pcs_room_fk') || error.message.includes('roomLocationId')) {
+            console.log('🔧 Attempting to fix PC foreign key constraints...');
+            try {
+                // Drop the problematic foreign key constraint if it exists
+                await sequelize.query(`
+                    ALTER TABLE PCs 
+                    DROP FOREIGN KEY IF EXISTS pcs_room_fk
+                `);
+                console.log('✅ PC foreign key constraint dropped successfully!');
+            } catch (fkError) {
+                console.log('⚠️  Could not drop PC foreign key constraint:', fkError.message);
+            }
+        }
+        
         console.log('Database models sync completed with manual fixes.');
     }
 
@@ -342,6 +357,42 @@ async function addInitialData() {
                 { name: 'storage room 2', description: 'Secondary storage room' },
                 { name: 'warehouse', description: 'Main warehouse' },
                 { name: 'office storage', description: 'Office storage area' }
+            ]);
+        }
+
+        // Check if we have any room locations
+        const roomLocationCount = await db.RoomLocation.count();
+        if (roomLocationCount === 0) {
+            console.log('Adding initial room locations...');
+            await db.RoomLocation.bulkCreate([
+                { 
+                    name: 'Computer Lab inventory System Front', 
+                    description: 'Front area of the computer lab',
+                    address: 'Computer Lab Building, Room 101',
+                    capacity: 30,
+                    createdBy: 1 // Default admin user
+                },
+                { 
+                    name: 'Computer Lab Back', 
+                    description: 'Back area of the computer lab',
+                    address: 'Computer Lab Building, Room 102',
+                    capacity: 25,
+                    createdBy: 1 // Default admin user
+                },
+                { 
+                    name: 'Server Room', 
+                    description: 'Server and networking equipment room',
+                    address: 'Computer Lab Building, Room 103',
+                    capacity: 10,
+                    createdBy: 1 // Default admin user
+                },
+                { 
+                    name: 'Training Room', 
+                    description: 'Training and presentation room',
+                    address: 'Computer Lab Building, Room 104',
+                    capacity: 20,
+                    createdBy: 1 // Default admin user
+                }
             ]);
         }
 

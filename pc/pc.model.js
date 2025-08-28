@@ -9,11 +9,7 @@ function model(sequelize) {
         serialNumber: { type: DataTypes.STRING, allowNull: true, unique: true },
         roomLocationId: { 
             type: DataTypes.INTEGER, 
-            allowNull: false,
-            references: {
-                model: 'RoomLocations',
-                key: 'id'
-            }
+            allowNull: false
         },
         status: { 
             type: DataTypes.ENUM('Active', 'Inactive', 'Maintenance', 'Retired'),
