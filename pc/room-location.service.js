@@ -10,11 +10,26 @@ module.exports = {
 
 // Get all room locations
 async function getAll() {
-    return await db.RoomLocation.findAll({
-        include: [
-            { model: db.PC, as: 'pcs', attributes: ['id', 'name'] }
-        ]
-    });
+    try {
+        console.log('🔍 Room Location Service - getAll called');
+        console.log('🔍 db.RoomLocation available:', !!db.RoomLocation);
+        
+        if (!db.RoomLocation) {
+            throw new Error('RoomLocation model not available');
+        }
+        
+        const rooms = await db.RoomLocation.findAll({
+            include: [
+                { model: db.PC, as: 'pcs', attributes: ['id', 'name'] }
+            ]
+        });
+        
+        console.log('✅ Room Location Service - getAll successful, found', rooms.length, 'rooms');
+        return rooms;
+    } catch (error) {
+        console.error('❌ Room Location Service - getAll error:', error);
+        throw error;
+    }
 }
 
 // Get room location by ID

@@ -2,9 +2,16 @@ const roomLocationService = require('./room-location.service');
 
 // GET all room locations
 exports.getAll = (req, res, next) => {
+    console.log('🔍 Room Location Controller - getAll called');
     roomLocationService.getAll()
-        .then(rooms => res.send(rooms))
-        .catch(next);
+        .then(rooms => {
+            console.log('✅ Room Location Controller - getAll successful, sending', rooms.length, 'rooms');
+            res.send(rooms);
+        })
+        .catch(error => {
+            console.error('❌ Room Location Controller - getAll error:', error);
+            next(error);
+        });
 };
 
 // GET room location by ID

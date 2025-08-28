@@ -15,9 +15,11 @@ async function startServer() {
         // Wait for database to be ready
         await new Promise(resolve => {
             const checkDb = () => {
-                if (db.sequelize) {
+                if (db.sequelize && db.RoomLocation && db.PC) {
+                    console.log('✅ Database and models are ready');
                     resolve();
                 } else {
+                    console.log('⏳ Waiting for database and models to be ready...');
                     setTimeout(checkDb, 100);
                 }
             };
@@ -123,6 +125,41 @@ app.get('/api/accounts-test', async (req, res) => {
         });
     } catch (error) {
         console.error('Accounts test error:', error);
+        res.status(500).json({ 
+            message: 'Database error', 
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
+// Test room locations endpoint without authentication
+app.get('/api/room-locations-test', async (req, res) => {
+    try {
+        console.log('🔍 Testing room locations endpoint');
+        console.log('🔍 db.RoomLocation available:', !!db.RoomLocation);
+        
+        if (!db.RoomLocation) {
+            return res.status(500).json({ 
+                message: 'RoomLocation model not available', 
+                timestamp: new Date()
+            });
+        }
+        
+        const roomCount = await db.RoomLocation.count();
+        const rooms = await db.RoomLocation.findAll({
+            attributes: ['id', 'name', 'description']
+        });
+        
+        res.json({ 
+            message: 'Room locations test endpoint', 
+            roomCount: roomCount,
+            rooms: rooms,
+            timestamp: new Date(),
+            status: 'OK'
+        });
+    } catch (error) {
+        console.error('Room locations test error:', error);
         res.status(500).json({ 
             message: 'Database error', 
             error: error.message,
