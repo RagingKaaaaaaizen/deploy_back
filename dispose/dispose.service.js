@@ -115,14 +115,21 @@ async function create(params, userId) {
         const disposalData = {
             itemId: Number(stockEntry.itemId), // Ensure itemId is a number
             quantity: Number(params.quantity), // Ensure quantity is a number
-            disposalValue: Number(disposalValue), // Ensure disposalValue is a number
             totalValue: Number(totalValue), // Ensure totalValue is a number
             locationId: Number(params.locationId), // Ensure locationId is a number
             reason: params.reason || '',
             disposalDate: new Date(),
-            createdBy: Number(userId), // Ensure userId is a number
-            sourceStockId: Number(params.stockEntryId) // Track which stock entry this disposal came from
+            createdBy: Number(userId) // Ensure userId is a number
         };
+
+        // Add optional columns if they exist in the schema
+        // These will be added by the schema fix script
+        if (db.Dispose.rawAttributes.disposalValue) {
+            disposalData.disposalValue = Number(disposalValue);
+        }
+        if (db.Dispose.rawAttributes.sourceStockId) {
+            disposalData.sourceStockId = Number(params.stockEntryId);
+        }
 
         console.log('Creating disposal with data:', disposalData);
         console.log('Stock entry itemId:', stockEntry.itemId);
