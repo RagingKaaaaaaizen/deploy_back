@@ -168,6 +168,47 @@ app.get('/api/room-locations-test', async (req, res) => {
     }
 });
 
+// Test PC creation endpoint without authentication
+app.post('/api/pcs-test', async (req, res) => {
+    try {
+        console.log('🔍 Testing PC creation endpoint');
+        console.log('🔍 Request body:', req.body);
+        
+        if (!db.PC) {
+            return res.status(500).json({ 
+                message: 'PC model not available', 
+                timestamp: new Date()
+            });
+        }
+        
+        // Check if room location exists
+        const roomLocation = await db.RoomLocation.findByPk(req.body.roomLocationId);
+        console.log('🔍 Room location found:', roomLocation);
+        
+        if (!roomLocation) {
+            return res.status(400).json({ 
+                message: 'Room location not found', 
+                roomLocationId: req.body.roomLocationId,
+                timestamp: new Date()
+            });
+        }
+        
+        res.json({ 
+            message: 'PC creation test successful', 
+            roomLocation: roomLocation,
+            timestamp: new Date(),
+            status: 'OK'
+        });
+    } catch (error) {
+        console.error('PC creation test error:', error);
+        res.status(500).json({ 
+            message: 'Database error', 
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
         // Global error handler
         app.use(errorHandler);
 
