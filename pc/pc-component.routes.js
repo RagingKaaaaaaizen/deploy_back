@@ -36,6 +36,7 @@ function updatePCComponentSchema(req, res, next) {
 router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAll);
 router.get('/pc/:pcId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getByPCId);
 router.get('/item/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getByItemId);
+router.get('/available-stock/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAccurateAvailableStock);
 router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);
 router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createPCComponentSchema, controller.create);
 router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updatePCComponentSchema, controller.update);

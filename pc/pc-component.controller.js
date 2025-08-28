@@ -59,4 +59,19 @@ exports.returnToStock = (req, res, next) => {
     pcComponentService.returnToStock(req.params.id)
         .then(result => res.send(result))
         .catch(next);
+};
+
+// GET accurate available stock for an item
+exports.getAccurateAvailableStock = (req, res, next) => {
+    const itemId = parseInt(req.params.itemId);
+    if (!itemId) {
+        return res.status(400).send({ message: 'Valid item ID is required' });
+    }
+    
+    pcComponentService.getAccurateAvailableStockForItem(itemId)
+        .then(availableStock => res.send({ 
+            itemId: itemId,
+            availableStock: availableStock 
+        }))
+        .catch(next);
 }; 

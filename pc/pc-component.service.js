@@ -4,12 +4,14 @@ const activityLogService = require('../activity-log/activity-log.service');
 module.exports = {
     getAll,
     getById,
-    getByPCId,
-    getByItemId,
     create,
     update,
     delete: _delete,
-    returnToStock
+    returnToStock,
+    getByPCId,
+    getByItemId,
+    getAvailableStockForItem,
+    getAccurateAvailableStockForItem
 };
 
 // Get all PC components
@@ -199,6 +201,44 @@ async function getAvailableStockForItem(itemId) {
         if (entry.quantity > 0) {
             availableStock += entry.quantity;
         }
+    });
+
+    return availableStock;
+}
+
+// Helper function to get accurate available stock for an item (total stock minus all PC component usage)
+async function getAccurateAvailableStockForItem(itemId) {
+    // Get all stock entries for this item
+    const stockEntries = await db.Stock.findAll({
+        where: { itemId },
+        order: [['createdAt', 'ASC']]
+    });
+
+    // Calculate total available stock (sum of all positive quantities)
+    let totalStock = 0;
+    stockEntries.forEach(entry => {
+        if (entry.quantity > 0) {
+            totalStock += entry.quantity;
+        }
+    });
+
+    // Get PC components usage for this item (from all PCs)
+    const pcComponents = await db.PCComponent.findAll({
+        where: { itemId }
+    });
+    
+    const usedInPCComponents = pcComponents.reduce((total, component) => {
+        return total + component.quantity;
+    }, 0);
+
+    // Calculate available stock (total stock - used in PC components)
+    const availableStock = Math.max(0, totalStock - usedInPCComponents);
+    
+    console.log(`Accurate stock calculation for item ${itemId}:`, {
+        totalStock,
+        usedInPCComponents,
+        availableStock,
+        pcComponentsCount: pcComponents.length
     });
 
     return availableStock;
