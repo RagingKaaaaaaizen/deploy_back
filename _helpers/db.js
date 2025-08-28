@@ -283,7 +283,6 @@ async function initialize() {
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         name VARCHAR(255) NOT NULL,
                         description TEXT,
-                        status ENUM('Active', 'Inactive', 'Maintenance') DEFAULT 'Active',
                         createdBy INT,
                         createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -294,11 +293,11 @@ async function initialize() {
                 // Insert default room locations if they don't exist
                 console.log('🔧 Inserting default room locations...');
                 await sequelize.query(`
-                    INSERT IGNORE INTO roomLocations (id, name, description, status, createdBy) VALUES
-                    (1, 'Computer Lab inventory System Front', 'Front area of the computer lab', 'Active', 1),
-                    (2, 'Computer Lab Back', 'Back area of the computer lab', 'Active', 1),
-                    (3, 'Server Room', 'Server and networking equipment room', 'Active', 1),
-                    (4, 'Training Room', 'Training and presentation room', 'Active', 1)
+                    INSERT IGNORE INTO roomLocations (id, name, description, createdBy) VALUES
+                    (1, 'Computer Lab inventory System Front', 'Front area of the computer lab', 1),
+                    (2, 'Computer Lab Back', 'Back area of the computer lab', 1),
+                    (3, 'Server Room', 'Server and networking equipment room', 1),
+                    (4, 'Training Room', 'Training and presentation room', 1)
                 `);
                 console.log('✅ Default room locations inserted successfully!');
                 
@@ -409,25 +408,21 @@ async function addInitialData() {
                 { 
                     name: 'Computer Lab inventory System Front', 
                     description: 'Front area of the computer lab',
-                    status: 'Active',
                     createdBy: 1 // Default admin user
                 },
                 { 
                     name: 'Computer Lab Back', 
                     description: 'Back area of the computer lab',
-                    status: 'Active',
                     createdBy: 1 // Default admin user
                 },
                 { 
                     name: 'Server Room', 
                     description: 'Server and networking equipment room',
-                    status: 'Active',
                     createdBy: 1 // Default admin user
                 },
                 { 
                     name: 'Training Room', 
                     description: 'Training and presentation room',
-                    status: 'Active',
                     createdBy: 1 // Default admin user
                 }
             ]);
