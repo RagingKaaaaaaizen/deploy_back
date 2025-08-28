@@ -31,13 +31,32 @@ async function startServer() {
 // Allow CORS - Configure for production
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
-        ? [process.env.FRONTEND_URL || 'https://your-frontend-app.onrender.com'] 
+        ? [process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend.onrender.com'] 
         : (origin, callback) => callback(null, true),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
+
+// Additional CORS headers for better compatibility
+app.use((req, res, next) => {
+    const allowedOrigin = process.env.NODE_ENV === 'production' 
+        ? process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend.onrender.com'
+        : '*';
+    
+    res.header('Access-Control-Allow-Origin', allowedOrigin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(204);
+    } else {
+        next();
+    }
+});
 
 // API routes
 app.use('/api/accounts', require('./accounts/account.controller'));
