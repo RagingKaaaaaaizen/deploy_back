@@ -411,29 +411,33 @@ async function addInitialData() {
                 { 
                     name: 'Computer Lab inventory System Front', 
                     description: 'Front area of the computer lab',
-                    address: 'Computer Lab Building, Room 101',
+                    roomNumber: '101',
                     capacity: 30,
+                    status: 'Active',
                     createdBy: 1 // Default admin user
                 },
                 { 
                     name: 'Computer Lab Back', 
                     description: 'Back area of the computer lab',
-                    address: 'Computer Lab Building, Room 102',
+                    roomNumber: '102',
                     capacity: 25,
+                    status: 'Active',
                     createdBy: 1 // Default admin user
                 },
                 { 
                     name: 'Server Room', 
                     description: 'Server and networking equipment room',
-                    address: 'Computer Lab Building, Room 103',
+                    roomNumber: '103',
                     capacity: 10,
+                    status: 'Active',
                     createdBy: 1 // Default admin user
                 },
                 { 
                     name: 'Training Room', 
                     description: 'Training and presentation room',
-                    address: 'Computer Lab Building, Room 104',
+                    roomNumber: '104',
                     capacity: 20,
+                    status: 'Active',
                     createdBy: 1 // Default admin user
                 }
             ]);
