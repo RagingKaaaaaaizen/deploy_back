@@ -139,9 +139,12 @@ async function register(params, origin) {
         account.verificationToken = null;
         account.acceptTerms = true;
     } else {
-        // Other users: require email verification
-        account.verificationToken = randomTokenString();
-        account.status = 'Inactive'; // Set as inactive until verified
+        // For testing purposes, make all new accounts active without email verification
+        // In production, you would want email verification
+        account.verified = new Date();
+        account.status = 'Active';
+        account.verificationToken = null;
+        account.acceptTerms = true;
     }
 
     await account.save();
@@ -162,15 +165,20 @@ async function register(params, origin) {
             account: basicDetails(account)
         };
     } else {
-        // Other users: send verification email
-        try {
-            await sendVerificationEmail(account, origin);
-            return { message: "Registration successful, please check your email for verification instructions" };
-        } catch (error) {
-            console.error('Email verification error:', error);
-            // Still return success but with a different message
-            return { message: "Registration successful! Please contact admin for account activation." };
-        }
+        // For testing: return authentication tokens for all new accounts
+        console.log('New account created and activated');
+        
+        // Generate authentication tokens for immediate login
+        const jwtToken = generateJwtToken(account);
+        const refreshToken = generateRefreshToken(account, '127.0.0.1'); // Default IP
+        await refreshToken.save();
+        
+        return { 
+            message: "Registration successful! You are now logged in.",
+            jwtToken,
+            refreshToken: refreshToken.token,
+            account: basicDetails(account)
+        };
     }
     } catch (error) {
         console.error('Registration error:', error);
