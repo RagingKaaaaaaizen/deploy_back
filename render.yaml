@@ -32,3 +32,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://computer-lab-inventory-frontend-059v.onrender.com
+      - key: ALLOW_ALL_ORIGINS
+        value: true

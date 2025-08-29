@@ -70,11 +70,27 @@ app.use(cors(corsOptions));
 
 // Additional CORS headers for better compatibility
 app.use((req, res, next) => {
-    const allowedOrigin = process.env.NODE_ENV === 'production' 
-        ? process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-059v.onrender.com'
-        : '*';
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+        'https://computer-lab-inventory-frontend-059v.onrender.com',
+        'https://computer-lab-inventory-frontend-mfzq.onrender.com',
+        'http://localhost:4200',
+        'http://localhost:3000'
+    ];
     
-    res.header('Access-Control-Allow-Origin', allowedOrigin);
+    if (process.env.FRONTEND_URL) {
+        allowedOrigins.push(process.env.FRONTEND_URL);
+    }
+    
+    // TEMPORARY: Allow all origins for debugging
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_ALL_ORIGINS === 'true') {
+        res.header('Access-Control-Allow-Origin', '*');
+    } else if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else if (process.env.NODE_ENV !== 'production') {
+        res.header('Access-Control-Allow-Origin', '*');
+    }
+    
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
@@ -139,7 +155,26 @@ app.get('/api/cors-test', (req, res) => {
         allowedOrigins: [
             'https://computer-lab-inventory-frontend-059v.onrender.com',
             'https://computer-lab-inventory-frontend-mfzq.onrender.com'
-        ]
+        ],
+        environment: process.env.NODE_ENV,
+        allowAllOrigins: process.env.ALLOW_ALL_ORIGINS
+    });
+});
+
+// Authentication test endpoint
+app.post('/api/accounts/authenticate-test', (req, res) => {
+    console.log('🔍 Authentication test endpoint called');
+    console.log('🔍 Request origin:', req.headers.origin);
+    console.log('🔍 Request method:', req.method);
+    console.log('🔍 Request headers:', req.headers);
+    
+    res.json({ 
+        message: 'Authentication endpoint is accessible!', 
+        timestamp: new Date(),
+        status: 'OK',
+        origin: req.headers.origin || 'No origin header',
+        method: req.method,
+        body: req.body
     });
 });
 
