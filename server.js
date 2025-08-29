@@ -35,7 +35,7 @@ async function startServer() {
 // Allow CORS - Configure for production
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
-        ? [process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend.onrender.com'] 
+        ? [process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-syja.onrender.com'] 
         : (origin, callback) => callback(null, true),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
