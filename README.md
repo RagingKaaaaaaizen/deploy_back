@@ -169,22 +169,25 @@ npm install --save-dev @types/bcryptjs @types/cors @types/dotenv @types/express 
 ## Team Assignments
 
 ### Backend Developer (API)
-- **@ Niel Ivan M. Eroy**
+- **@ Karl Villar**
 
 ### Frontend Developer (Angular)
-- **@Rey Nino Perez**
+- **@Francis Hugh Adolfo**
 
 ### Tester (API and Frontend Testing)
-- **@Sean Ivan Ostra**
+- **@all**
 
-### Documentation Specialist (README.md)
-- **Jurace L. Lomutos**
+### Documentation and Researcher (README.md)
+- **Manelyn Jarumay and Cheriemae Catubig**
+
+### Project Manager (README.md)
+- **Chrystal Mae Ybanez**
 
 ### DevOps Lead (Repository Setup, Branch Management, CI/CD Pipeline if Applicable)
-- **@Andrew Czar S. Mata**
+- **@Rommel Qurimit**
 
 ---
 
 # Collaborative Development of a Full-Stack Application
-## Hotel Management System
+## Stock Inventory System
 
