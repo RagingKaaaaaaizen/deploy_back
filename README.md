@@ -176,14 +176,14 @@ npm install --save-dev @types/bcryptjs @types/cors @types/dotenv @types/express 
 
 ### Tester (API and Frontend Testing)
 - **All**
-### Frontend Developer (Angular)
+### Project manager 
 - **@ Chrystal mae Ybanez**
 
 ### Documentation & Researcher Specialist (README.md)
 - **@ Manelyn Jarumay , Cheriemae Catubig**
 
 ### DevOps Lead (Repository Setup, Branch Management, CI/CD Pipeline if Applicable)
-- **Karl Vilar**
+- **Karl Vilar and Rommel Quirimt**
 
 ---
 Capstone Project [Documentation Progress Updated] Link: ( https://docs.google.com/document/d/1ssJPVR6PM84RHQZWU-bYXXH1B8LEumSB-kB0M8DLtew/edit?tab=t.0 )
