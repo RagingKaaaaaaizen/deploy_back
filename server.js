@@ -34,12 +34,36 @@ async function startServer() {
 
 // Allow CORS - Configure for production
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production' 
-        ? [process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-059v.onrender.com'] 
-        : (origin, callback) => callback(null, true),
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            'https://computer-lab-inventory-frontend-059v.onrender.com',
+            'https://computer-lab-inventory-frontend-mfzq.onrender.com',
+            'http://localhost:4200',
+            'http://localhost:3000'
+        ];
+        
+        if (process.env.FRONTEND_URL) {
+            allowedOrigins.push(process.env.FRONTEND_URL);
+        }
+        
+        // TEMPORARY: Allow all origins for debugging
+        if (process.env.NODE_ENV === 'production' && process.env.ALLOW_ALL_ORIGINS === 'true') {
+            return callback(null, true);
+        }
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
     optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
@@ -99,7 +123,23 @@ app.get('/api/test', (req, res) => {
     res.json({ 
         message: 'Server is working!', 
         timestamp: new Date(),
-        status: 'OK'
+        status: 'OK',
+        cors: 'CORS is configured',
+        origin: req.headers.origin || 'No origin header'
+    });
+});
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+    res.json({ 
+        message: 'CORS test successful!', 
+        timestamp: new Date(),
+        status: 'OK',
+        origin: req.headers.origin || 'No origin header',
+        allowedOrigins: [
+            'https://computer-lab-inventory-frontend-059v.onrender.com',
+            'https://computer-lab-inventory-frontend-mfzq.onrender.com'
+        ]
     });
 });
 
