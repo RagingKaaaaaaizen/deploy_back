@@ -169,19 +169,22 @@ npm install --save-dev @types/bcryptjs @types/cors @types/dotenv @types/express 
 ## Team Assignments
 
 ### Backend Developer (API)
-- **@ Niel Ivan M. Eroy**
+- **@ Karl Vilar**
 
 ### Frontend Developer (Angular)
-- **@Rey Nino Perez**
+- **@Francis Hugh Adolfo**
 
 ### Tester (API and Frontend Testing)
-- **@Sean Ivan Ostra**
+- **@all**
 
-### Documentation Specialist (README.md)
-- **Jurace L. Lomutos**
+### Documentation and Researcher Specialist (README.md)
+- **Manelyn Jarumay and Cheriemae Catubig**
+
+### Project Manager (README.md)
+- **Chrystal Mae Ybanez**
 
 ### DevOps Lead (Repository Setup, Branch Management, CI/CD Pipeline if Applicable)
-- **@Andrew Czar S. Mata**
+- **@Rommel Quirimit**
 
 ---
 
