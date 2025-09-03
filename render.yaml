@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: computer-lab-inventory-backend
+    name: computer-lab-inventory-backend-tybe
     env: node
     plan: free
     buildCommand: npm install
@@ -15,7 +15,7 @@ services:
       - key: DB_USER
         value: u875409848_vilar
       - key: DB_PASSWORD
-        value: 6xw;kmmXC$
+        value: 6xw;kmmXC$8
       - key: DB_NAME
         value: u875409848_vilar
       - key: JWT_SECRET

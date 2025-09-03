@@ -39,9 +39,7 @@ const corsOptions = {
         if (!origin) return callback(null, true);
         
         const allowedOrigins = [
-            'https://computer-lab-inventory-frontend-ted1.onrender.com',
-            'https://computer-lab-inventory-frontend-059v.onrender.com',
-            'https://computer-lab-inventory-frontend-mfzq.onrender.com',
+            'https://computer-lab-inventory-frontend-tedl.onrender.com',
             'http://localhost:4200',
             'http://localhost:3000'
         ];
@@ -73,9 +71,7 @@ app.use(cors(corsOptions));
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowedOrigins = [
-        'https://computer-lab-inventory-frontend-ted1.onrender.com',
-        'https://computer-lab-inventory-frontend-059v.onrender.com',
-        'https://computer-lab-inventory-frontend-mfzq.onrender.com',
+        'https://computer-lab-inventory-frontend-tedl.onrender.com',
         'http://localhost:4200',
         'http://localhost:3000'
     ];
