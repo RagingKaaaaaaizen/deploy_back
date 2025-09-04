@@ -18,6 +18,7 @@
         "express-jwt": "^8.5.1",
         "joi": "^17.2.1",
         "jsonwebtoken": "^9.0.2",
+        "multer": "^2.0.2",
         "mysql2": "^3.14.0",
         "nodemailer": "^6.4.11",
         "rootpath": "^0.1.2",

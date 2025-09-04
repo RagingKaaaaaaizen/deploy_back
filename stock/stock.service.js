@@ -14,7 +14,7 @@ module.exports = {
 async function getAll() {
     return await db.Stock.findAll({
         // Temporarily removed quantity filter to debug returned items
-        attributes: ['id', 'itemId', 'quantity', 'price', 'totalPrice', 'locationId', 'remarks', 'disposeId', 'createdAt', 'createdBy'],
+        attributes: ['id', 'itemId', 'quantity', 'price', 'totalPrice', 'locationId', 'remarks', 'receiptAttachment', 'disposeId', 'createdAt', 'createdBy'],
         include: [
             { 
                 model: db.Item, 
@@ -41,7 +41,7 @@ async function getAll() {
 // Get single stock log with complete information
 async function getById(id) {
     return await db.Stock.findByPk(id, {
-        attributes: ['id', 'itemId', 'quantity', 'price', 'totalPrice', 'locationId', 'remarks', 'disposeId', 'createdAt', 'createdBy'],
+        attributes: ['id', 'itemId', 'quantity', 'price', 'totalPrice', 'locationId', 'remarks', 'receiptAttachment', 'disposeId', 'createdAt', 'createdBy'],
         include: [
             { 
                 model: db.Item, 

@@ -1,4 +1,6 @@
 const stockService = require('./stock.service');
+const path = require('path');
+const fs = require('fs');
 
 // GET all stock logs
 exports.getLogs = (req, res, next) => {
@@ -17,6 +19,11 @@ exports.addStock = (req, res, next) => {
     // Ensure user is authenticated
     if (!req.user || !req.user.id) {
         return res.status(401).send({ message: 'User authentication required' });
+    }
+
+    // Handle file upload if present
+    if (req.file) {
+        req.body.receiptAttachment = req.file.filename;
     }
 
     stockService.create(req.body, req.user.id)
@@ -50,4 +57,18 @@ exports.getAvailableStock = (req, res, next) => {
     stockService.getAvailableStock(req.params.itemId)
         .then(stock => res.send(stock))
         .catch(next);
+};
+
+// GET receipt file
+exports.getReceipt = (req, res, next) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, '../uploads/receipts', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).send({ message: 'Receipt file not found' });
+    }
+    
+    // Send file
+    res.sendFile(filePath);
 };

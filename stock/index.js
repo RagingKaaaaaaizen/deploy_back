@@ -3,6 +3,7 @@ const router = express.Router();
 const authorize = require('../_middleware/authorize');
 const Role = require('../_helpers/role');
 const validateRequest = require('../_middleware/validate-request');
+const upload = require('../_middleware/upload');
 const Joi = require('joi');
 const controller = require('./stock.controller');
 
@@ -14,6 +15,7 @@ function addStockSchema(req, res, next) {
         locationId: Joi.number().required(),                   // FOREIGN KEY to StorageLocation
         price: Joi.number().required(),                        // NEW FIELD: price
         remarks: Joi.string().allow(''),
+        receiptAttachment: Joi.string().allow(''),             // Optional receipt file path
         disposeId: Joi.number().optional()                     // Optional link to disposal record
     });
     validateRequest(req, next, schema);
@@ -34,7 +36,8 @@ function updateStockSchema(req, res, next) {
 router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getLogs);                                   // GET all stock logs
 router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getById);                                // GET single stock log
 router.get('/available/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAvailableStock);        // GET available stock for item
-router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), addStockSchema, controller.addStock);      // CREATE stock
+router.get('/receipt/:filename', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getReceipt);               // GET receipt file
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), upload.single('receipt'), addStockSchema, controller.addStock);      // CREATE stock with file upload
 router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateStockSchema, controller.updateStock); // UPDATE stock
 router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller._delete);                   // DELETE stock
 
