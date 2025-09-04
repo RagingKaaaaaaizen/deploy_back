@@ -3,8 +3,7 @@ const { ApprovalRequest, Account } = db;
 
 // Create a new approval request
 async function create(requestData) {
-    const approvalRequest = new ApprovalRequest(requestData);
-    return await approvalRequest.save();
+    return await ApprovalRequest.create(requestData);
 }
 
 // Get all approval requests with creator and approver details
