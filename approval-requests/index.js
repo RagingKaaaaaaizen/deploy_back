@@ -32,6 +32,16 @@ function rejectRequestSchema(req, res, next) {
     validateRequest(req, next, schema);
 }
 
+// Test endpoint without authentication
+router.get('/test', (req, res) => {
+    res.json({ 
+        message: 'Approval requests endpoint is working!', 
+        timestamp: new Date(),
+        status: 'OK',
+        endpoint: '/api/approval-requests/test'
+    });
+});
+
 // Routes
 router.get('/', authorize([Role.SuperAdmin, Role.Admin]), controller.getAll);                    // GET all requests (SuperAdmin/Admin)
 router.get('/my', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller.getMyRequests); // GET my requests (All roles)

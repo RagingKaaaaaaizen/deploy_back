@@ -59,18 +59,41 @@ exports.approve = async (req, res, next) => {
 
         console.log('=== APPROVE REQUEST DEBUG ===');
         console.log('Request ID:', id);
-        console.log('User ID:', req.user.id);
-        console.log('User Role:', req.user.role);
+        console.log('User ID:', req.user ? req.user.id : 'NO USER');
+        console.log('User Role:', req.user ? req.user.role : 'NO ROLE');
         console.log('Remarks:', remarks);
+        console.log('Request Body:', JSON.stringify(req.body, null, 2));
+        console.log('Request Params:', JSON.stringify(req.params, null, 2));
+
+        // Check database connection first
+        try {
+            await db.sequelize.authenticate();
+            console.log('✅ Database connection verified');
+        } catch (dbConnectionError) {
+            console.error('❌ Database connection failed:', dbConnectionError);
+            return res.status(500).json({ message: 'Database connection failed' });
+        }
 
         // Get the approval request with simpler query to avoid relationship issues
         let approvalRequest;
         try {
+            console.log('Attempting to find approval request with ID:', id);
             approvalRequest = await db.ApprovalRequest.findByPk(id);
             console.log('Approval Request Found:', approvalRequest ? 'Yes' : 'No');
+            if (approvalRequest) {
+                console.log('Approval Request Data:', JSON.stringify(approvalRequest.dataValues, null, 2));
+            }
         } catch (dbError) {
             console.error('❌ Database error getting approval request:', dbError);
-            return res.status(500).json({ message: 'Database error retrieving approval request' });
+            console.error('Database error details:', {
+                message: dbError.message,
+                stack: dbError.stack,
+                name: dbError.name
+            });
+            return res.status(500).json({ 
+                message: 'Database error retrieving approval request',
+                error: dbError.message 
+            });
         }
         
         if (!approvalRequest) {
@@ -179,7 +202,15 @@ exports.approve = async (req, res, next) => {
         }
     } catch (error) {
         console.error('❌ Error in approve function:', error);
-        next(error);
+        console.error('Error stack:', error.stack);
+        console.error('Error message:', error.message);
+        
+        // Return a more detailed error response
+        res.status(500).json({
+            message: 'Internal server error during approval',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
 };
 
