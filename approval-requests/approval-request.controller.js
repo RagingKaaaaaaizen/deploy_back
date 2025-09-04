@@ -2,6 +2,33 @@ const approvalRequestService = require('./approval-request.service');
 const stockService = require('../stock/stock.service');
 const disposeService = require('../dispose/dispose.service');
 
+// Test endpoint to check stock service
+exports.testStockService = async (req, res) => {
+    try {
+        console.log('Testing stock service...');
+        console.log('Stock service methods:', Object.keys(stockService));
+        
+        // Test if we can call the service
+        const testResult = await stockService.getAll();
+        console.log('Stock service test successful, found', testResult.length, 'stocks');
+        
+        res.json({
+            message: 'Stock service is working!',
+            methods: Object.keys(stockService),
+            stockCount: testResult.length,
+            timestamp: new Date()
+        });
+    } catch (error) {
+        console.error('Stock service test failed:', error);
+        res.status(500).json({
+            message: 'Stock service test failed!',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 // GET /api/approval-requests - Get all approval requests (SuperAdmin/Admin only)
 exports.getAll = async (req, res, next) => {
     try {
