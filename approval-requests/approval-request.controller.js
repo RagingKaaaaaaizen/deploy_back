@@ -240,10 +240,37 @@ exports.approve = async (req, res, next) => {
             console.log('Created by user ID:', approvalRequest.createdBy);
             
             try {
-                await executeStockRequest(approvalRequest.requestData, approvalRequest.createdBy);
-                console.log('✅ Stock request executed successfully');
+                // Simplified stock creation - bypass complex logic
+                console.log('=== SIMPLIFIED STOCK CREATION ===');
+                const requestData = approvalRequest.requestData;
+                console.log('Raw request data:', JSON.stringify(requestData, null, 2));
+                
+                // Create stock entry directly
+                const stockData = {
+                    itemId: parseInt(requestData.itemId),
+                    locationId: parseInt(requestData.locationId),
+                    quantity: parseInt(requestData.quantity),
+                    price: parseFloat(requestData.price),
+                    totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
+                    remarks: requestData.remarks || '',
+                    receiptAttachment: requestData.receiptAttachment || null,
+                    disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
+                    createdBy: approvalRequest.createdBy
+                };
+                
+                console.log('Stock data to create:', JSON.stringify(stockData, null, 2));
+                
+                const newStock = await db.Stock.create(stockData);
+                console.log('✅ Stock created successfully with ID:', newStock.id);
+                
             } catch (stockError) {
                 console.error('❌ Error executing stock request:', stockError);
+                console.error('Stock error details:', {
+                    message: stockError.message,
+                    stack: stockError.stack,
+                    name: stockError.name
+                });
+                
                 // Rollback the approval status update
                 try {
                     await db.ApprovalRequest.update({
