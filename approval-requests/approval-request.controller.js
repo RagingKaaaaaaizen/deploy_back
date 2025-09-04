@@ -57,29 +57,52 @@ exports.approve = async (req, res, next) => {
         const { id } = req.params;
         const { remarks } = req.body;
 
+        console.log('=== APPROVE REQUEST DEBUG ===');
+        console.log('Request ID:', id);
+        console.log('User ID:', req.user.id);
+        console.log('User Role:', req.user.role);
+        console.log('Remarks:', remarks);
+
         // Get the approval request
         const approvalRequest = await approvalRequestService.getById(id);
+        console.log('Approval Request Found:', approvalRequest ? 'Yes' : 'No');
+        
         if (!approvalRequest) {
+            console.log('❌ Approval request not found for ID:', id);
             return res.status(404).json({ message: 'Approval request not found' });
         }
 
+        console.log('Current Status:', approvalRequest.status);
+        console.log('Request Type:', approvalRequest.type);
+        console.log('Request Data:', approvalRequest.requestData);
+
         if (approvalRequest.status !== 'pending') {
+            console.log('❌ Request is not pending, current status:', approvalRequest.status);
             return res.status(400).json({ message: 'Request is not pending' });
         }
 
         // Update status to approved
+        console.log('Updating status to approved...');
         await approvalRequestService.updateStatus(id, 'approved', req.user.id, null, remarks);
 
         // Execute the actual request based on type
+        console.log('Executing request of type:', approvalRequest.type);
         if (approvalRequest.type === 'stock') {
+            console.log('Executing stock request with data:', approvalRequest.requestData);
+            console.log('Created by user ID:', approvalRequest.createdBy);
             await executeStockRequest(approvalRequest.requestData, approvalRequest.createdBy);
+            console.log('✅ Stock request executed successfully');
         } else if (approvalRequest.type === 'dispose') {
+            console.log('Executing dispose request...');
             await executeDisposeRequest(approvalRequest.requestData);
+            console.log('✅ Dispose request executed successfully');
         }
 
         const updatedRequest = await approvalRequestService.getById(id);
+        console.log('✅ Approval completed successfully');
         res.json(updatedRequest);
     } catch (error) {
+        console.error('❌ Error in approve function:', error);
         next(error);
     }
 };
