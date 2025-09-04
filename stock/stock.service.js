@@ -1,5 +1,11 @@
 const db = require('../_helpers/db');
-const activityLogService = require('../activity-log/activity-log.service');
+let activityLogService;
+try {
+    activityLogService = require('../activity-log/activity-log.service');
+} catch (error) {
+    console.warn('⚠️ Activity log service not available:', error.message);
+    activityLogService = null;
+}
 
 module.exports = {
     getAll,
@@ -150,8 +156,12 @@ async function create(params, userId) {
         };
         
         console.log('Activity data to log:', JSON.stringify(activityData, null, 2));
-        await activityLogService.logActivity(activityData);
-        console.log('✅ Activity logged successfully');
+        if (activityLogService) {
+            await activityLogService.logActivity(activityData);
+            console.log('✅ Activity logged successfully');
+        } else {
+            console.log('⚠️ Activity logging skipped - service not available');
+        }
     } catch (activityError) {
         console.error('❌ Failed to log stock creation activity:', activityError);
         // Don't throw error here, just log it - the stock was created successfully

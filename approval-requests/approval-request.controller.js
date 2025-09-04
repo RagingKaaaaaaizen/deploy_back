@@ -63,9 +63,15 @@ exports.approve = async (req, res, next) => {
         console.log('User Role:', req.user.role);
         console.log('Remarks:', remarks);
 
-        // Get the approval request
-        const approvalRequest = await approvalRequestService.getById(id);
-        console.log('Approval Request Found:', approvalRequest ? 'Yes' : 'No');
+        // Get the approval request with simpler query to avoid relationship issues
+        let approvalRequest;
+        try {
+            approvalRequest = await db.ApprovalRequest.findByPk(id);
+            console.log('Approval Request Found:', approvalRequest ? 'Yes' : 'No');
+        } catch (dbError) {
+            console.error('❌ Database error getting approval request:', dbError);
+            return res.status(500).json({ message: 'Database error retrieving approval request' });
+        }
         
         if (!approvalRequest) {
             console.log('❌ Approval request not found for ID:', id);
@@ -74,16 +80,30 @@ exports.approve = async (req, res, next) => {
 
         console.log('Current Status:', approvalRequest.status);
         console.log('Request Type:', approvalRequest.type);
-        console.log('Request Data:', approvalRequest.requestData);
+        console.log('Request Data:', JSON.stringify(approvalRequest.requestData, null, 2));
+        console.log('Created By:', approvalRequest.createdBy);
 
         if (approvalRequest.status !== 'pending') {
             console.log('❌ Request is not pending, current status:', approvalRequest.status);
             return res.status(400).json({ message: 'Request is not pending' });
         }
 
-        // Update status to approved
+        // Update status to approved with direct database update
         console.log('Updating status to approved...');
-        await approvalRequestService.updateStatus(id, 'approved', req.user.id, null, remarks);
+        try {
+            await db.ApprovalRequest.update({
+                status: 'approved',
+                approvedBy: req.user.id,
+                approvedAt: new Date(),
+                remarks: remarks || null
+            }, {
+                where: { id: id }
+            });
+            console.log('✅ Approval status updated successfully');
+        } catch (updateError) {
+            console.error('❌ Error updating approval status:', updateError);
+            return res.status(500).json({ message: 'Failed to update approval status' });
+        }
 
         // Execute the actual request based on type
         console.log('Executing request of type:', approvalRequest.type);
@@ -97,7 +117,19 @@ exports.approve = async (req, res, next) => {
             } catch (stockError) {
                 console.error('❌ Error executing stock request:', stockError);
                 // Rollback the approval status update
-                await approvalRequestService.updateStatus(id, 'pending', null, null, null);
+                try {
+                    await db.ApprovalRequest.update({
+                        status: 'pending',
+                        approvedBy: null,
+                        approvedAt: null,
+                        remarks: null
+                    }, {
+                        where: { id: id }
+                    });
+                    console.log('✅ Rollback completed - status reverted to pending');
+                } catch (rollbackError) {
+                    console.error('❌ Error during rollback:', rollbackError);
+                }
                 throw new Error(`Failed to execute stock request: ${stockError.message}`);
             }
         } else if (approvalRequest.type === 'dispose') {
@@ -108,14 +140,43 @@ exports.approve = async (req, res, next) => {
             } catch (disposeError) {
                 console.error('❌ Error executing dispose request:', disposeError);
                 // Rollback the approval status update
-                await approvalRequestService.updateStatus(id, 'pending', null, null, null);
+                try {
+                    await db.ApprovalRequest.update({
+                        status: 'pending',
+                        approvedBy: null,
+                        approvedAt: null,
+                        remarks: null
+                    }, {
+                        where: { id: id }
+                    });
+                    console.log('✅ Rollback completed - status reverted to pending');
+                } catch (rollbackError) {
+                    console.error('❌ Error during rollback:', rollbackError);
+                }
                 throw new Error(`Failed to execute dispose request: ${disposeError.message}`);
             }
         }
 
-        const updatedRequest = await approvalRequestService.getById(id);
-        console.log('✅ Approval completed successfully');
-        res.json(updatedRequest);
+        // Get the updated request with simple query
+        try {
+            const updatedRequest = await db.ApprovalRequest.findByPk(id);
+            console.log('✅ Approval completed successfully');
+            res.json({
+                id: updatedRequest.id,
+                type: updatedRequest.type,
+                status: updatedRequest.status,
+                requestData: updatedRequest.requestData,
+                createdBy: updatedRequest.createdBy,
+                approvedBy: updatedRequest.approvedBy,
+                approvedAt: updatedRequest.approvedAt,
+                remarks: updatedRequest.remarks,
+                createdAt: updatedRequest.createdAt,
+                updatedAt: updatedRequest.updatedAt
+            });
+        } catch (responseError) {
+            console.error('❌ Error getting updated request:', responseError);
+            res.json({ message: 'Approval completed successfully' });
+        }
     } catch (error) {
         console.error('❌ Error in approve function:', error);
         next(error);
