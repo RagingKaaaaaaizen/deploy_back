@@ -1,3 +1,4 @@
+const db = require('../_helpers/db');
 const approvalRequestService = require('./approval-request.service');
 const stockService = require('../stock/stock.service');
 const disposeService = require('../dispose/dispose.service');
