@@ -8,6 +8,7 @@ const errorHandler = require('./_middleware/error-handler');
 
 // Initialize database
 const db = require('./_helpers/db');
+const autoMigrate = require('./auto-migrate');
 
 // Wait for database initialization before starting server
 async function startServer() {
@@ -25,6 +26,9 @@ async function startServer() {
             };
             checkDb();
         });
+
+        // Run auto-migration for receiptAttachment column
+        await autoMigrate();
 
 
 
