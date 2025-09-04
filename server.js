@@ -4,11 +4,13 @@ const app = express();
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const path = require('path');
 const errorHandler = require('./_middleware/error-handler');
 
 // Initialize database
 const db = require('./_helpers/db');
 const autoMigrate = require('./auto-migrate');
+const ensureUploadsDirectory = require('./ensure-uploads-dir');
 
 // Wait for database initialization before starting server
 async function startServer() {
@@ -29,6 +31,9 @@ async function startServer() {
 
         // Run auto-migration for receiptAttachment column
         await autoMigrate();
+        
+        // Ensure uploads directory exists
+        ensureUploadsDirectory();
 
 
 
@@ -83,6 +88,9 @@ app.use('/api/analytics', require('./analytics/analytics.routes'));
 
 // Swagger docs
 app.use('/api-docs', require('./_helpers/swagger'));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint for Render
 app.get('/health', (req, res) => {
