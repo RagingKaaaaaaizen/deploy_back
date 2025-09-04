@@ -64,10 +64,6 @@ app.use((req, res, next) => {
 
 // API routes
 app.use('/api/accounts', require('./accounts/account.controller'));
-app.use('/api/employees', require('./employees/employee.controller'));
-app.use('/api/departments', require('./departments/department.controller'));
-app.use('/api/workflows', require('./workflows/workflow.controller'));
-app.use('/api/requests', require('./requests/request.controller'));
 app.use('/api/brands', require('./brand/brand.controller'));
 app.use('/api/categories', require('./category'));
 app.use('/api/items', require('./items'));
@@ -160,47 +156,6 @@ app.get('/api/room-locations-test', async (req, res) => {
         });
     } catch (error) {
         console.error('Room locations test error:', error);
-        res.status(500).json({ 
-            message: 'Database error', 
-            error: error.message,
-            timestamp: new Date()
-        });
-    }
-});
-
-// Test PC creation endpoint without authentication
-app.post('/api/pcs-test', async (req, res) => {
-    try {
-        console.log('🔍 Testing PC creation endpoint');
-        console.log('🔍 Request body:', req.body);
-        
-        if (!db.PC) {
-            return res.status(500).json({ 
-                message: 'PC model not available', 
-                timestamp: new Date()
-            });
-        }
-        
-        // Check if room location exists
-        const roomLocation = await db.RoomLocation.findByPk(req.body.roomLocationId);
-        console.log('🔍 Room location found:', roomLocation);
-        
-        if (!roomLocation) {
-            return res.status(400).json({ 
-                message: 'Room location not found', 
-                roomLocationId: req.body.roomLocationId,
-                timestamp: new Date()
-            });
-        }
-        
-        res.json({ 
-            message: 'PC creation test successful', 
-            roomLocation: roomLocation,
-            timestamp: new Date(),
-            status: 'OK'
-        });
-    } catch (error) {
-        console.error('PC creation test error:', error);
         res.status(500).json({ 
             message: 'Database error', 
             error: error.message,
