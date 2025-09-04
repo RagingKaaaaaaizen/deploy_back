@@ -35,7 +35,7 @@ async function startServer() {
 // Allow CORS - Configure for production
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
-        ? [process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend.onrender.com'] 
+        ? [process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-jfdu.onrender.com'] 
         : (origin, callback) => callback(null, true),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -47,7 +47,7 @@ app.use(cors(corsOptions));
 // Additional CORS headers for better compatibility
 app.use((req, res, next) => {
     const allowedOrigin = process.env.NODE_ENV === 'production' 
-        ? process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend.onrender.com'
+        ? process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-jfdu.onrender.com'
         : '*';
     
     res.header('Access-Control-Allow-Origin', allowedOrigin);
