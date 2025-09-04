@@ -18,7 +18,7 @@ function createApprovalRequestSchema(req, res, next) {
 // Validation schema for approving request
 function approveRequestSchema(req, res, next) {
     const schema = Joi.object({
-        remarks: Joi.string().allow('')
+        remarks: Joi.string().allow('').optional()
     });
     validateRequest(req, next, schema);
 }

@@ -64,6 +64,7 @@ exports.approve = async (req, res, next) => {
         console.log('Remarks:', remarks);
         console.log('Request Body:', JSON.stringify(req.body, null, 2));
         console.log('Request Params:', JSON.stringify(req.params, null, 2));
+        console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
 
         // Check database connection first
         try {
