@@ -72,7 +72,7 @@ exports.approve = async (req, res, next) => {
 
         // Execute the actual request based on type
         if (approvalRequest.type === 'stock') {
-            await executeStockRequest(approvalRequest.requestData);
+            await executeStockRequest(approvalRequest.requestData, approvalRequest.createdBy);
         } else if (approvalRequest.type === 'dispose') {
             await executeDisposeRequest(approvalRequest.requestData);
         }
@@ -151,14 +151,14 @@ exports.getPendingCount = async (req, res, next) => {
 };
 
 // Helper function to execute stock request
-async function executeStockRequest(requestData) {
+async function executeStockRequest(requestData, createdBy) {
     // Handle multiple stock entries
     if (Array.isArray(requestData)) {
         for (const stockData of requestData) {
-            await stockService.create(stockData);
+            await stockService.create(stockData, createdBy);
         }
     } else {
-        await stockService.create(requestData);
+        await stockService.create(requestData, createdBy);
     }
 }
 
