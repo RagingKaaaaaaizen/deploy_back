@@ -7,12 +7,12 @@ const Joi = require('joi');
 const specificationService = require('./specification.service');
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getById);
 router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createSchema, create);
 router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateSchema, update);
 router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), deleteField);
-router.get('/category/:categoryId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getFieldsByCategory);
+router.get('/category/:categoryId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getFieldsByCategory);
 router.delete('/category/:categoryId', authorize([Role.SuperAdmin, Role.Admin]), deleteFieldsByCategory);
 
 module.exports = router;

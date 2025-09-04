@@ -5,11 +5,11 @@ const Role = require('../_helpers/role');
 const brandService = require('./brand.service');
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
-router.post('/', authorize([Role.SuperAdmin, Role.Admin]), create);
-router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), update);
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), _delete);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), _delete);
 
 module.exports = router;
 

@@ -33,14 +33,14 @@ function updatePCComponentSchema(req, res, next) {
 }
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAll);
-router.get('/pc/:pcId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getByPCId);
-router.get('/item/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getByItemId);
-router.get('/available-stock/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAccurateAvailableStock);
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);
-router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createPCComponentSchema, controller.create);
-router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updatePCComponentSchema, controller.update);
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller.delete);
-router.post('/:id/return-to-stock', authorize([Role.SuperAdmin, Role.Admin]), controller.returnToStock);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAll);
+router.get('/pc/:pcId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getByPCId);
+router.get('/item/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getByItemId);
+router.get('/available-stock/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAccurateAvailableStock);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), createPCComponentSchema, controller.create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updatePCComponentSchema, controller.update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller.delete);
+router.post('/:id/return-to-stock', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller.returnToStock);
 
 module.exports = router; 

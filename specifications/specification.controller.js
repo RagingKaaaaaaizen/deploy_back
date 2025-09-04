@@ -7,8 +7,8 @@ const Joi = require('joi');
 const specificationService = require('./specification.service');
 
 // Routes
-router.get('/category/:categoryId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getFieldsByCategory);
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAllFields);
+router.get('/category/:categoryId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getFieldsByCategory);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getAllFields);
 router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createSchema, createField);
 router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateSchema, updateField);
 router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), deleteField);

@@ -7,12 +7,12 @@ const Joi = require('joi');
 const pcService = require('./pc.service');
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getAll);
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getById);
-router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createSchema, create);
-router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateSchema, update);
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), deletePC);
-router.get('/specifications/:categoryId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), getSpecificationFields);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), createSchema, create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateSchema, update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), deletePC);
+router.get('/specifications/:categoryId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getSpecificationFields);
 
 module.exports = router;
 

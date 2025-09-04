@@ -35,10 +35,10 @@ function updateRoomLocationSchema(req, res, next) {
 }
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAll);
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);
-router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createRoomLocationSchema, controller.create);
-router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateRoomLocationSchema, controller.update);
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller.delete);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), createRoomLocationSchema, controller.create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateRoomLocationSchema, controller.update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller.delete);
 
 module.exports = router; 

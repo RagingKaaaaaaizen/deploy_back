@@ -31,11 +31,11 @@ function updateStockSchema(req, res, next) {
 }
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getLogs);                                   // GET all stock logs
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);                                // GET single stock log
-router.get('/available/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAvailableStock);        // GET available stock for item
-router.post('/', authorize([Role.SuperAdmin, Role.Admin]), addStockSchema, controller.addStock);      // CREATE stock
-router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateStockSchema, controller.updateStock); // UPDATE stock
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller._delete);                   // DELETE stock
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getLogs);                                   // GET all stock logs
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getById);                                // GET single stock log
+router.get('/available/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAvailableStock);        // GET available stock for item
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), addStockSchema, controller.addStock);      // CREATE stock
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateStockSchema, controller.updateStock); // UPDATE stock
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller._delete);                   // DELETE stock
 
 module.exports = router;

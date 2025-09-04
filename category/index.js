@@ -24,10 +24,10 @@ function updateSchema(req, res, next) {
 }
 
 // Routes
-router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getAll);
-router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Viewer]), controller.getById);
-router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createSchema, controller.create);
-router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateSchema, controller.update);
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller._delete);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), createSchema, controller.create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateSchema, controller.update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller._delete);
 
 module.exports = router;
