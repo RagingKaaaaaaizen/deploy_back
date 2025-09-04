@@ -60,21 +60,43 @@ async function getById(id) {
 
 // Create new stock log
 async function create(params, userId) {
-    if (!params.itemId) throw 'Item is required';
-    if (!params.locationId) throw 'Location is required';
-    if (!params.price) throw 'Price is required';
-    if (!userId) throw 'User ID is required';
+    console.log('=== STOCK SERVICE CREATE DEBUG ===');
+    console.log('Params received:', JSON.stringify(params, null, 2));
+    console.log('User ID received:', userId);
+    console.log('Params type:', typeof params);
+    console.log('User ID type:', typeof userId);
+    
+    if (!params.itemId) {
+        console.error('❌ Missing itemId');
+        throw 'Item is required';
+    }
+    if (!params.locationId) {
+        console.error('❌ Missing locationId');
+        throw 'Location is required';
+    }
+    if (!params.price) {
+        console.error('❌ Missing price');
+        throw 'Price is required';
+    }
+    if (!userId) {
+        console.error('❌ Missing userId');
+        throw 'User ID is required';
+    }
 
     // Calculate total price
     const totalPrice = params.quantity * params.price;
+    console.log('Calculated total price:', totalPrice);
 
     const stockData = {
         ...params,
         totalPrice: totalPrice,
         createdBy: userId
     };
+    
+    console.log('Final stock data to create:', JSON.stringify(stockData, null, 2));
 
     const stock = await db.Stock.create(stockData);
+    console.log('✅ Stock created successfully with ID:', stock.id);
     
     // Log activity after successful stock creation
     try {

@@ -175,13 +175,52 @@ exports.getPendingCount = async (req, res, next) => {
 
 // Helper function to execute stock request
 async function executeStockRequest(requestData, createdBy) {
-    // Handle multiple stock entries
-    if (Array.isArray(requestData)) {
-        for (const stockData of requestData) {
-            await stockService.create(stockData, createdBy);
+    console.log('=== EXECUTE STOCK REQUEST DEBUG ===');
+    console.log('Request Data:', JSON.stringify(requestData, null, 2));
+    console.log('Created By:', createdBy);
+    console.log('Is Array:', Array.isArray(requestData));
+    
+    try {
+        // Handle multiple stock entries
+        if (Array.isArray(requestData)) {
+            console.log('Processing array of stock entries...');
+            for (let i = 0; i < requestData.length; i++) {
+                console.log(`Processing stock entry ${i + 1}:`, JSON.stringify(requestData[i], null, 2));
+                await stockService.create(requestData[i], createdBy);
+                console.log(`✅ Stock entry ${i + 1} created successfully`);
+            }
+        } else {
+            console.log('Processing single stock entry...');
+            console.log('Stock data to create:', JSON.stringify(requestData, null, 2));
+            console.log('User ID for creation:', createdBy);
+            
+            // Validate required fields before creating
+            if (!requestData.itemId) {
+                throw new Error('Missing itemId in request data');
+            }
+            if (!requestData.locationId) {
+                throw new Error('Missing locationId in request data');
+            }
+            if (!requestData.price) {
+                throw new Error('Missing price in request data');
+            }
+            if (!requestData.quantity) {
+                throw new Error('Missing quantity in request data');
+            }
+            
+            const result = await stockService.create(requestData, createdBy);
+            console.log('✅ Single stock entry created successfully:', result.id);
         }
-    } else {
-        await stockService.create(requestData, createdBy);
+        console.log('✅ All stock entries processed successfully');
+    } catch (error) {
+        console.error('❌ Error in executeStockRequest:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            requestData: requestData,
+            createdBy: createdBy
+        });
+        throw error;
     }
 }
 
