@@ -30,6 +30,82 @@ exports.testStockService = async (req, res) => {
     }
 };
 
+// Test endpoint to check database connection
+exports.testDatabase = async (req, res) => {
+    try {
+        console.log('Testing database connection...');
+        
+        // Test database connection
+        await db.sequelize.authenticate();
+        console.log('Database connection successful');
+        
+        // Test approval request model
+        const approvalCount = await db.ApprovalRequest.count();
+        console.log('Found', approvalCount, 'approval requests');
+        
+        // Test stock model
+        const stockCount = await db.Stock.count();
+        console.log('Found', stockCount, 'stock entries');
+        
+        res.json({
+            message: 'Database is working!',
+            approvalRequests: approvalCount,
+            stockEntries: stockCount,
+            timestamp: new Date()
+        });
+    } catch (error) {
+        console.error('Database test failed:', error);
+        res.status(500).json({
+            message: 'Database test failed!',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
+// Test endpoint to simulate approval process
+exports.testApprovalProcess = async (req, res) => {
+    try {
+        console.log('Testing approval process...');
+        
+        // Get the first pending approval request
+        const pendingRequest = await db.ApprovalRequest.findOne({
+            where: { status: 'pending' }
+        });
+        
+        if (!pendingRequest) {
+            return res.json({
+                message: 'No pending approval requests found',
+                timestamp: new Date()
+            });
+        }
+        
+        console.log('Found pending request:', pendingRequest.id);
+        console.log('Request data:', JSON.stringify(pendingRequest.requestData, null, 2));
+        
+        // Test the cleanStockData function
+        const cleanedData = cleanStockData(pendingRequest.requestData);
+        console.log('Cleaned data:', JSON.stringify(cleanedData, null, 2));
+        
+        res.json({
+            message: 'Approval process test successful',
+            pendingRequestId: pendingRequest.id,
+            requestData: pendingRequest.requestData,
+            cleanedData: cleanedData,
+            timestamp: new Date()
+        });
+    } catch (error) {
+        console.error('Approval process test failed:', error);
+        res.status(500).json({
+            message: 'Approval process test failed!',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 // GET /api/approval-requests - Get all approval requests (SuperAdmin/Admin only)
 exports.getAll = async (req, res, next) => {
     try {

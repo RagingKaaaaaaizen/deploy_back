@@ -45,6 +45,12 @@ router.get('/test', (req, res) => {
 // Test stock service endpoint
 router.get('/test-stock-service', controller.testStockService);
 
+// Test database endpoint
+router.get('/test-database', controller.testDatabase);
+
+// Test approval process endpoint
+router.get('/test-approval-process', controller.testApprovalProcess);
+
 // Routes
 router.get('/', authorize([Role.SuperAdmin, Role.Admin]), controller.getAll);                    // GET all requests (SuperAdmin/Admin)
 router.get('/my', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller.getMyRequests); // GET my requests (All roles)
