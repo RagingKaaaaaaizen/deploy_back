@@ -220,24 +220,7 @@ exports.approve = async (req, res, next) => {
             return res.status(400).json({ message: 'Request is not pending' });
         }
 
-        // Update status to approved with direct database update
-        console.log('Updating status to approved...');
-        try {
-            await db.ApprovalRequest.update({
-                status: 'approved',
-                approvedBy: req.user.id,
-                approvedAt: new Date(),
-                remarks: remarks || null
-            }, {
-                where: { id: id }
-            });
-            console.log('✅ Approval status updated successfully');
-        } catch (updateError) {
-            console.error('❌ Error updating approval status:', updateError);
-            return res.status(500).json({ message: 'Failed to update approval status' });
-        }
-
-        // Execute the actual request based on type
+        // Execute the actual request based on type FIRST, then update status
         console.log('Executing request of type:', approvalRequest.type);
         if (approvalRequest.type === 'stock') {
             console.log('Executing stock request with data:', approvalRequest.requestData);
@@ -302,6 +285,18 @@ exports.approve = async (req, res, next) => {
                 const newStock = await db.Stock.create(stockData);
                 console.log('✅ Stock created successfully with ID:', newStock.id);
                 
+                // Only update approval status AFTER successful stock creation
+                console.log('Updating status to approved...');
+                await db.ApprovalRequest.update({
+                    status: 'approved',
+                    approvedBy: req.user.id,
+                    approvedAt: new Date(),
+                    remarks: remarks || null
+                }, {
+                    where: { id: id }
+                });
+                console.log('✅ Approval status updated successfully');
+                
             } catch (stockError) {
                 console.error('❌ Error executing stock request:', stockError);
                 console.error('Stock error details:', {
@@ -310,20 +305,7 @@ exports.approve = async (req, res, next) => {
                     name: stockError.name
                 });
                 
-                // Rollback the approval status update
-                try {
-                    await db.ApprovalRequest.update({
-                        status: 'pending',
-                        approvedBy: null,
-                        approvedAt: null,
-                        remarks: null
-                    }, {
-                        where: { id: id }
-                    });
-                    console.log('✅ Rollback completed - status reverted to pending');
-                } catch (rollbackError) {
-                    console.error('❌ Error during rollback:', rollbackError);
-                }
+                // Don't update approval status if stock creation failed
                 throw new Error(`Failed to execute stock request: ${stockError.message}`);
             }
         } else if (approvalRequest.type === 'dispose') {
@@ -331,22 +313,22 @@ exports.approve = async (req, res, next) => {
             try {
                 await executeDisposeRequest(approvalRequest.requestData);
                 console.log('✅ Dispose request executed successfully');
+                
+                // Only update approval status AFTER successful dispose execution
+                console.log('Updating status to approved...');
+                await db.ApprovalRequest.update({
+                    status: 'approved',
+                    approvedBy: req.user.id,
+                    approvedAt: new Date(),
+                    remarks: remarks || null
+                }, {
+                    where: { id: id }
+                });
+                console.log('✅ Approval status updated successfully');
+                
             } catch (disposeError) {
                 console.error('❌ Error executing dispose request:', disposeError);
-                // Rollback the approval status update
-                try {
-                    await db.ApprovalRequest.update({
-                        status: 'pending',
-                        approvedBy: null,
-                        approvedAt: null,
-                        remarks: null
-                    }, {
-                        where: { id: id }
-                    });
-                    console.log('✅ Rollback completed - status reverted to pending');
-                } catch (rollbackError) {
-                    console.error('❌ Error during rollback:', rollbackError);
-                }
+                // Don't update approval status if dispose execution failed
                 throw new Error(`Failed to execute dispose request: ${disposeError.message}`);
             }
         }
