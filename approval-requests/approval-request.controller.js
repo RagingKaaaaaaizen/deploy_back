@@ -90,12 +90,27 @@ exports.approve = async (req, res, next) => {
         if (approvalRequest.type === 'stock') {
             console.log('Executing stock request with data:', approvalRequest.requestData);
             console.log('Created by user ID:', approvalRequest.createdBy);
-            await executeStockRequest(approvalRequest.requestData, approvalRequest.createdBy);
-            console.log('✅ Stock request executed successfully');
+            
+            try {
+                await executeStockRequest(approvalRequest.requestData, approvalRequest.createdBy);
+                console.log('✅ Stock request executed successfully');
+            } catch (stockError) {
+                console.error('❌ Error executing stock request:', stockError);
+                // Rollback the approval status update
+                await approvalRequestService.updateStatus(id, 'pending', null, null, null);
+                throw new Error(`Failed to execute stock request: ${stockError.message}`);
+            }
         } else if (approvalRequest.type === 'dispose') {
             console.log('Executing dispose request...');
-            await executeDisposeRequest(approvalRequest.requestData);
-            console.log('✅ Dispose request executed successfully');
+            try {
+                await executeDisposeRequest(approvalRequest.requestData);
+                console.log('✅ Dispose request executed successfully');
+            } catch (disposeError) {
+                console.error('❌ Error executing dispose request:', disposeError);
+                // Rollback the approval status update
+                await approvalRequestService.updateStatus(id, 'pending', null, null, null);
+                throw new Error(`Failed to execute dispose request: ${disposeError.message}`);
+            }
         }
 
         const updatedRequest = await approvalRequestService.getById(id);
@@ -173,6 +188,24 @@ exports.getPendingCount = async (req, res, next) => {
     }
 };
 
+// Helper function to clean and validate stock data
+function cleanStockData(data) {
+    console.log('Cleaning stock data:', JSON.stringify(data, null, 2));
+    
+    const cleaned = {
+        itemId: parseInt(data.itemId),
+        locationId: parseInt(data.locationId),
+        quantity: parseInt(data.quantity),
+        price: parseFloat(data.price),
+        remarks: data.remarks || '',
+        receiptAttachment: data.receiptAttachment || null,
+        disposeId: data.disposeId ? parseInt(data.disposeId) : null
+    };
+    
+    console.log('Cleaned stock data:', JSON.stringify(cleaned, null, 2));
+    return cleaned;
+}
+
 // Helper function to execute stock request
 async function executeStockRequest(requestData, createdBy) {
     console.log('=== EXECUTE STOCK REQUEST DEBUG ===');
@@ -186,7 +219,8 @@ async function executeStockRequest(requestData, createdBy) {
             console.log('Processing array of stock entries...');
             for (let i = 0; i < requestData.length; i++) {
                 console.log(`Processing stock entry ${i + 1}:`, JSON.stringify(requestData[i], null, 2));
-                await stockService.create(requestData[i], createdBy);
+                const cleanedData = cleanStockData(requestData[i]);
+                await stockService.create(cleanedData, createdBy);
                 console.log(`✅ Stock entry ${i + 1} created successfully`);
             }
         } else {
@@ -194,21 +228,24 @@ async function executeStockRequest(requestData, createdBy) {
             console.log('Stock data to create:', JSON.stringify(requestData, null, 2));
             console.log('User ID for creation:', createdBy);
             
-            // Validate required fields before creating
-            if (!requestData.itemId) {
-                throw new Error('Missing itemId in request data');
+            // Clean and validate the data
+            const cleanedData = cleanStockData(requestData);
+            
+            // Validate required fields after cleaning
+            if (!cleanedData.itemId || isNaN(cleanedData.itemId)) {
+                throw new Error('Invalid or missing itemId in request data');
             }
-            if (!requestData.locationId) {
-                throw new Error('Missing locationId in request data');
+            if (!cleanedData.locationId || isNaN(cleanedData.locationId)) {
+                throw new Error('Invalid or missing locationId in request data');
             }
-            if (!requestData.price) {
-                throw new Error('Missing price in request data');
+            if (!cleanedData.price || isNaN(cleanedData.price)) {
+                throw new Error('Invalid or missing price in request data');
             }
-            if (!requestData.quantity) {
-                throw new Error('Missing quantity in request data');
+            if (!cleanedData.quantity || isNaN(cleanedData.quantity)) {
+                throw new Error('Invalid or missing quantity in request data');
             }
             
-            const result = await stockService.create(requestData, createdBy);
+            const result = await stockService.create(cleanedData, createdBy);
             console.log('✅ Single stock entry created successfully:', result.id);
         }
         console.log('✅ All stock entries processed successfully');

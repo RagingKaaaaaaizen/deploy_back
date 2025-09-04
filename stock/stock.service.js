@@ -95,41 +95,66 @@ async function create(params, userId) {
     
     console.log('Final stock data to create:', JSON.stringify(stockData, null, 2));
 
-    const stock = await db.Stock.create(stockData);
-    console.log('✅ Stock created successfully with ID:', stock.id);
+    let stock;
+    try {
+        stock = await db.Stock.create(stockData);
+        console.log('✅ Stock created successfully with ID:', stock.id);
+    } catch (dbError) {
+        console.error('❌ Database error creating stock:', dbError);
+        console.error('Stock data that failed:', JSON.stringify(stockData, null, 2));
+        throw new Error(`Database error creating stock: ${dbError.message}`);
+    }
     
     // Log activity after successful stock creation
     try {
+        console.log('Logging activity for stock creation...');
         const item = await db.Item.findByPk(params.itemId, {
             include: [
                 { model: db.Category, as: 'category', attributes: ['name'] },
                 { model: db.Brand, as: 'brand', attributes: ['name'] }
             ]
         });
-        const location = await db.StorageLocation.findByPk(params.locationId);
-        const user = await db.Account.findByPk(userId);
         
-        await activityLogService.logActivity({
+        if (!item) {
+            console.warn('⚠️ Item not found for activity logging:', params.itemId);
+        }
+        
+        const location = await db.StorageLocation.findByPk(params.locationId);
+        if (!location) {
+            console.warn('⚠️ Location not found for activity logging:', params.locationId);
+        }
+        
+        const user = await db.Account.findByPk(userId);
+        if (!user) {
+            console.warn('⚠️ User not found for activity logging:', userId);
+        }
+        
+        const activityData = {
             userId: userId,
             action: 'ADD_STOCK',
             entityType: 'STOCK',
             entityId: stock.id,
-            entityName: `Added ${params.quantity} units of ${item.name} (${item.brand.name} - ${item.category.name}) to ${location.name}`,
+            entityName: `Added ${params.quantity} units of ${item?.name || 'Unknown Item'} to ${location?.name || 'Unknown Location'}`,
             details: { 
                 itemId: params.itemId,
-                itemName: item.name,
-                categoryName: item.category.name,
-                brandName: item.brand.name,
+                itemName: item?.name || 'Unknown Item',
+                categoryName: item?.category?.name || 'Unknown Category',
+                brandName: item?.brand?.name || 'Unknown Brand',
                 locationId: params.locationId,
-                locationName: location.name,
+                locationName: location?.name || 'Unknown Location',
                 quantity: params.quantity,
                 price: params.price,
                 totalPrice: totalPrice,
                 createdBy: user ? `${user.firstName} ${user.lastName}` : 'Unknown User'
             }
-        });
-    } catch (error) {
-        console.error('Failed to log stock creation activity:', error);
+        };
+        
+        console.log('Activity data to log:', JSON.stringify(activityData, null, 2));
+        await activityLogService.logActivity(activityData);
+        console.log('✅ Activity logged successfully');
+    } catch (activityError) {
+        console.error('❌ Failed to log stock creation activity:', activityError);
+        // Don't throw error here, just log it - the stock was created successfully
     }
     
     return stock;
