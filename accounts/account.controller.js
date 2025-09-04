@@ -201,7 +201,7 @@ function createSchema(req, res, next) {
         email: Joi.string().email().required(),
         password: Joi.string().min(6).required(),
         confirmPassword: Joi.string().valid(Joi.ref('password')).required(),
-        role: Joi.string().valid(Role.SuperAdmin, Role.Admin, Role.Viewer).required(),
+        role: Joi.string().valid(Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer).required(),
         status: Joi.string().valid('Active', 'Inactive').default('Active')
     });
     validateRequest(req, next, schema);
@@ -225,9 +225,9 @@ function updateSchema(req, res, next) {
     };
 
     if (req.user.role === Role.SuperAdmin) {
-        schemaRules.role = Joi.string().valid(Role.SuperAdmin, Role.Admin, Role.Viewer).empty('');
+        schemaRules.role = Joi.string().valid(Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer).empty('');
     } else if (req.user.role === Role.Admin) {
-        schemaRules.role = Joi.string().valid(Role.Admin, Role.Viewer).empty('');
+        schemaRules.role = Joi.string().valid(Role.Admin, Role.Staff, Role.Viewer).empty('');
     }
 
     const schema = Joi.object(schemaRules).with('password', 'confirmPassword');
