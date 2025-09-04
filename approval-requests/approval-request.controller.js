@@ -69,6 +69,22 @@ exports.testApprovalProcess = async (req, res) => {
     try {
         console.log('Testing approval process...');
         
+        // Test database connection
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Test models
+        console.log('Available models:', Object.keys(db));
+        console.log('Stock model available:', !!db.Stock);
+        console.log('ApprovalRequest model available:', !!db.ApprovalRequest);
+        console.log('Dispose model available:', !!db.Dispose);
+        
+        // Test Stock model methods
+        if (db.Stock) {
+            console.log('Stock model methods:', Object.getOwnPropertyNames(db.Stock));
+            console.log('Stock.create method:', typeof db.Stock.create);
+        }
+        
         // Get the first pending approval request
         const pendingRequest = await db.ApprovalRequest.findOne({
             where: { status: 'pending' }
@@ -77,6 +93,10 @@ exports.testApprovalProcess = async (req, res) => {
         if (!pendingRequest) {
             return res.json({
                 message: 'No pending approval requests found',
+                models: Object.keys(db),
+                stockModel: !!db.Stock,
+                approvalModel: !!db.ApprovalRequest,
+                disposeModel: !!db.Dispose,
                 timestamp: new Date()
             });
         }
@@ -84,15 +104,14 @@ exports.testApprovalProcess = async (req, res) => {
         console.log('Found pending request:', pendingRequest.id);
         console.log('Request data:', JSON.stringify(pendingRequest.requestData, null, 2));
         
-        // Test the cleanStockData function
-        const cleanedData = cleanStockData(pendingRequest.requestData);
-        console.log('Cleaned data:', JSON.stringify(cleanedData, null, 2));
-        
         res.json({
             message: 'Approval process test successful',
             pendingRequestId: pendingRequest.id,
             requestData: pendingRequest.requestData,
-            cleanedData: cleanedData,
+            models: Object.keys(db),
+            stockModel: !!db.Stock,
+            approvalModel: !!db.ApprovalRequest,
+            disposeModel: !!db.Dispose,
             timestamp: new Date()
         });
     } catch (error) {
@@ -310,9 +329,24 @@ exports.approve = async (req, res, next) => {
             }
         } else if (approvalRequest.type === 'dispose') {
             console.log('Executing dispose request...');
+            console.log('Dispose request data:', JSON.stringify(approvalRequest.requestData, null, 2));
+            
             try {
-                await executeDisposeRequest(approvalRequest.requestData);
-                console.log('✅ Dispose request executed successfully');
+                // Check if dispose service is available
+                if (!disposeService) {
+                    throw new Error('Dispose service is not available');
+                }
+                console.log('Dispose service is available');
+                
+                // Check if disposeService.create method exists
+                if (typeof disposeService.create !== 'function') {
+                    throw new Error('disposeService.create method is not available');
+                }
+                console.log('disposeService.create method is available');
+                
+                // Execute dispose request
+                const disposeResult = await disposeService.create(approvalRequest.requestData);
+                console.log('✅ Dispose request executed successfully:', disposeResult);
                 
                 // Only update approval status AFTER successful dispose execution
                 console.log('Updating status to approved...');
@@ -328,9 +362,17 @@ exports.approve = async (req, res, next) => {
                 
             } catch (disposeError) {
                 console.error('❌ Error executing dispose request:', disposeError);
+                console.error('Dispose error details:', {
+                    message: disposeError.message,
+                    stack: disposeError.stack,
+                    name: disposeError.name
+                });
                 // Don't update approval status if dispose execution failed
                 throw new Error(`Failed to execute dispose request: ${disposeError.message}`);
             }
+        } else {
+            console.log('❌ Unknown request type:', approvalRequest.type);
+            return res.status(400).json({ message: 'Unknown request type' });
         }
 
         // Get the updated request with simple query
@@ -507,6 +549,3 @@ async function executeStockRequest(requestData, createdBy) {
 }
 
 // Helper function to execute dispose request
-async function executeDisposeRequest(requestData) {
-    await disposeService.create(requestData);
-}
