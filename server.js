@@ -85,6 +85,7 @@ app.use('/api/specifications', require('./specifications/specification.controlle
 app.use('/api/dispose', require('./dispose'));
 app.use('/api/activity-logs', require('./activity-log'));
 app.use('/api/analytics', require('./analytics/analytics.routes'));
+app.use('/api/approval-requests', require('./approval-requests'));
 
 // Swagger docs
 app.use('/api-docs', require('./_helpers/swagger'));

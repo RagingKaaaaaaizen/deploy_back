@@ -128,6 +128,7 @@ async function initialize() {
     db.SpecificationField = require('../specifications/specification.model')(sequelize, DataTypes);
     db.Dispose = require('../dispose/dispose.model')(sequelize, DataTypes);
     db.ActivityLog = require('../activity-log/activity-log.model')(sequelize, DataTypes);
+    db.ApprovalRequest = require('../approval-requests/approval-request.model')(sequelize, DataTypes);
 
     // ---------------- RELATIONSHIPS ----------------
     // Storage Location -> Stock
@@ -206,6 +207,13 @@ async function initialize() {
     // Activity Log Relationships
     db.Account.hasMany(db.ActivityLog, { foreignKey: 'userId', as: 'activityLogs' });
     db.ActivityLog.belongsTo(db.Account, { foreignKey: 'userId', as: 'user' });
+
+    // Approval Request Relationships
+    db.Account.hasMany(db.ApprovalRequest, { foreignKey: 'createdBy', as: 'createdRequests' });
+    db.ApprovalRequest.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'creator' });
+    
+    db.Account.hasMany(db.ApprovalRequest, { foreignKey: 'approvedBy', as: 'approvedRequests' });
+    db.ApprovalRequest.belongsTo(db.Account, { foreignKey: 'approvedBy', as: 'approver' });
 
     // sync all models with database - force: true will drop and recreate all tables
     // Use { force: true } to drop and recreate all tables (WARNING: This will delete all data!)
