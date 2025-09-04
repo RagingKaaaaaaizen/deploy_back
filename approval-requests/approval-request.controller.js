@@ -187,6 +187,10 @@ exports.approve = async (req, res, next) => {
             console.log('Approval Request Found:', approvalRequest ? 'Yes' : 'No');
             if (approvalRequest) {
                 console.log('Approval Request Data:', JSON.stringify(approvalRequest.dataValues, null, 2));
+                console.log('Request Data Type:', typeof approvalRequest.requestData);
+                console.log('Request Data Keys:', Object.keys(approvalRequest.requestData || {}));
+                console.log('Created By Type:', typeof approvalRequest.createdBy);
+                console.log('Created By Value:', approvalRequest.createdBy);
             }
         } catch (dbError) {
             console.error('❌ Database error getting approval request:', dbError);
@@ -244,6 +248,28 @@ exports.approve = async (req, res, next) => {
                 console.log('=== SIMPLIFIED STOCK CREATION ===');
                 const requestData = approvalRequest.requestData;
                 console.log('Raw request data:', JSON.stringify(requestData, null, 2));
+                console.log('Request data type:', typeof requestData);
+                console.log('Request data is array:', Array.isArray(requestData));
+                
+                // Validate required fields before processing
+                if (!requestData) {
+                    throw new Error('Request data is null or undefined');
+                }
+                
+                if (!requestData.itemId) {
+                    throw new Error('itemId is missing from request data');
+                }
+                if (!requestData.locationId) {
+                    throw new Error('locationId is missing from request data');
+                }
+                if (!requestData.quantity) {
+                    throw new Error('quantity is missing from request data');
+                }
+                if (!requestData.price) {
+                    throw new Error('price is missing from request data');
+                }
+                
+                console.log('All required fields present, proceeding with stock creation...');
                 
                 // Create stock entry directly
                 const stockData = {
@@ -259,6 +285,19 @@ exports.approve = async (req, res, next) => {
                 };
                 
                 console.log('Stock data to create:', JSON.stringify(stockData, null, 2));
+                console.log('About to call db.Stock.create...');
+                
+                // Check if Stock model is available
+                if (!db.Stock) {
+                    throw new Error('Stock model is not available in db object');
+                }
+                console.log('Stock model is available');
+                
+                // Check if Stock.create method exists
+                if (typeof db.Stock.create !== 'function') {
+                    throw new Error('Stock.create method is not available');
+                }
+                console.log('Stock.create method is available');
                 
                 const newStock = await db.Stock.create(stockData);
                 console.log('✅ Stock created successfully with ID:', newStock.id);
