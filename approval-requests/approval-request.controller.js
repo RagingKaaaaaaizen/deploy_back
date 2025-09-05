@@ -388,6 +388,61 @@ exports.test = async (req, res) => {
     }
 };
 
+// Simple API health check without complex operations
+exports.apiCheck = async (req, res) => {
+    try {
+        console.log('=== SIMPLE API CHECK ===');
+        
+        // Test 1: Basic database connection
+        await db.sequelize.authenticate();
+        console.log('✅ Database connected');
+        
+        // Test 2: Count records without complex queries
+        const approvalCount = await db.ApprovalRequest.count();
+        console.log('✅ Approval requests count:', approvalCount);
+        
+        // Test 3: Simple model check
+        const hasStock = !!db.Stock;
+        const hasApprovalRequest = !!db.ApprovalRequest;
+        console.log('✅ Models available - Stock:', hasStock, 'ApprovalRequest:', hasApprovalRequest);
+        
+        // Test 4: Get one approval request to test query
+        let sampleApproval = null;
+        if (approvalCount > 0) {
+            sampleApproval = await db.ApprovalRequest.findOne({
+                attributes: ['id', 'type', 'status'],
+                limit: 1
+            });
+            console.log('✅ Sample approval found:', sampleApproval?.id);
+        }
+        
+        const response = {
+            message: 'API health check passed!',
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            approvalCount: approvalCount,
+            modelsAvailable: {
+                Stock: hasStock,
+                ApprovalRequest: hasApprovalRequest
+            },
+            sampleApprovalId: sampleApproval?.id || null,
+            serverStatus: 'healthy'
+        };
+        
+        console.log('✅ API Check successful:', response);
+        res.json(response);
+        
+    } catch (error) {
+        console.error('❌ API Check failed:', error);
+        res.status(500).json({ 
+            message: 'API health check failed', 
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+        });
+    }
+};
+
 // Test endpoint to check stock service
 exports.testStockService = async (req, res) => {
     try {
