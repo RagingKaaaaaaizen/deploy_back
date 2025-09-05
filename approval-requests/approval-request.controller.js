@@ -921,21 +921,41 @@ exports.approve = async (req, res, next) => {
             
             const requestData = approvalRequest.requestData;
             
-            // Validate all required fields
-            if (!requestData?.itemId || !requestData?.locationId || !requestData?.quantity || !requestData?.price) {
+            // Validate all required fields with proper null/undefined checks
+            console.log('Validating required fields...');
+            console.log('itemId:', requestData?.itemId, 'type:', typeof requestData?.itemId);
+            console.log('locationId:', requestData?.locationId, 'type:', typeof requestData?.locationId);
+            console.log('quantity:', requestData?.quantity, 'type:', typeof requestData?.quantity);
+            console.log('price:', requestData?.price, 'type:', typeof requestData?.price);
+            
+            const missing = [];
+            
+            // Check for null, undefined, or empty string (but allow 0)
+            if (requestData?.itemId == null || requestData?.itemId === '') {
+                missing.push('itemId');
+            }
+            if (requestData?.locationId == null || requestData?.locationId === '') {
+                missing.push('locationId');
+            }
+            if (requestData?.quantity == null || requestData?.quantity === '') {
+                missing.push('quantity');
+            }
+            if (requestData?.price == null || requestData?.price === '') {
+                missing.push('price');
+            }
+            
+            if (missing.length > 0) {
                 await transaction.rollback();
-                const missing = [];
-                if (!requestData?.itemId) missing.push('itemId');
-                if (!requestData?.locationId) missing.push('locationId');
-                if (!requestData?.quantity) missing.push('quantity');
-                if (!requestData?.price) missing.push('price');
-                
                 console.error('❌ Missing required fields:', missing);
+                console.error('Full requestData for debugging:', JSON.stringify(requestData, null, 2));
                 return res.status(400).json({ 
                     message: 'Missing required fields', 
-                    missingFields: missing 
+                    missingFields: missing,
+                    receivedData: requestData
                 });
             }
+            
+            console.log('✅ All required fields present');
 
             // Validate foreign key references exist
             console.log('Step 5: Validating foreign key references...');
@@ -969,15 +989,37 @@ exports.approve = async (req, res, next) => {
             console.log('Location:', locationExists.name);
             console.log('User:', userExists.firstName, userExists.lastName);
 
-            // Step 6: Create stock entry
+            // Step 6: Create stock entry with proper type conversion
             console.log('Step 6: Creating stock entry...');
             
+            // Parse and validate numeric values
+            const itemId = parseInt(requestData.itemId);
+            const locationId = parseInt(requestData.locationId);
+            const quantity = parseInt(requestData.quantity);
+            const price = parseFloat(requestData.price);
+            
+            // Validate parsed numbers
+            if (isNaN(itemId) || isNaN(locationId) || isNaN(quantity) || isNaN(price)) {
+                await transaction.rollback();
+                console.error('❌ Invalid numeric values in request data');
+                console.error('Parsed values:', { itemId, locationId, quantity, price });
+                return res.status(400).json({ 
+                    message: 'Invalid numeric values in request data',
+                    invalidValues: {
+                        itemId: isNaN(itemId) ? 'invalid' : itemId,
+                        locationId: isNaN(locationId) ? 'invalid' : locationId,
+                        quantity: isNaN(quantity) ? 'invalid' : quantity,
+                        price: isNaN(price) ? 'invalid' : price
+                    }
+                });
+            }
+            
             const stockData = {
-                itemId: parseInt(requestData.itemId),
-                locationId: parseInt(requestData.locationId),
-                quantity: parseInt(requestData.quantity),
-                price: parseFloat(requestData.price),
-                totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
+                itemId: itemId,
+                locationId: locationId,
+                quantity: quantity,
+                price: price,
+                totalPrice: quantity * price,
                 remarks: requestData.remarks || '',
                 receiptAttachment: requestData.receiptAttachment || null,
                 disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
@@ -985,7 +1027,7 @@ exports.approve = async (req, res, next) => {
                 createdAt: new Date()
             };
 
-            console.log('Creating stock with data:', JSON.stringify(stockData, null, 2));
+            console.log('Creating stock with validated data:', JSON.stringify(stockData, null, 2));
             
             const newStock = await db.Stock.create(stockData, { transaction });
             console.log('✅ Stock created successfully with ID:', newStock.id);
