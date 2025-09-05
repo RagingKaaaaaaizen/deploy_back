@@ -823,265 +823,234 @@ exports.create = async (req, res, next) => {
 
 // PUT /api/approval-requests/:id/approve - Approve request
 exports.approve = async (req, res, next) => {
+    const transaction = await db.sequelize.transaction();
+    
     try {
         const { id } = req.params;
         const { remarks } = req.body;
 
-        console.log('=== APPROVE REQUEST DEBUG ===');
-        console.log('Request ID:', id);
-        console.log('User ID:', req.user ? req.user.id : 'NO USER');
-        console.log('User Role:', req.user ? req.user.role : 'NO ROLE');
+        console.log('=== BULLETPROOF APPROVAL WORKFLOW ===');
+        console.log('Step 1: Starting approval process for ID:', id);
+        console.log('Approving user:', req.user?.id, 'Role:', req.user?.role);
         console.log('Remarks:', remarks);
-        console.log('Request Body:', JSON.stringify(req.body, null, 2));
-        console.log('Request Params:', JSON.stringify(req.params, null, 2));
-        console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
 
-        // Check database connection first
-        try {
-            await db.sequelize.authenticate();
-            console.log('✅ Database connection verified');
-        } catch (dbConnectionError) {
-            console.error('❌ Database connection failed:', dbConnectionError);
-            return res.status(500).json({ message: 'Database connection failed' });
-        }
+        // Step 1: Validate database connection
+        console.log('Step 2: Testing database connection...');
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection verified');
 
-        // Get the approval request with simpler query to avoid relationship issues
-        let approvalRequest;
-        try {
-            console.log('Attempting to find approval request with ID:', id);
-            approvalRequest = await db.ApprovalRequest.findByPk(id);
-            console.log('Approval Request Found:', approvalRequest ? 'Yes' : 'No');
-            if (approvalRequest) {
-                console.log('Approval Request Data:', JSON.stringify(approvalRequest.dataValues, null, 2));
-                console.log('Request Data Type:', typeof approvalRequest.requestData);
-                console.log('Request Data Keys:', Object.keys(approvalRequest.requestData || {}));
-                console.log('Created By Type:', typeof approvalRequest.createdBy);
-                console.log('Created By Value:', approvalRequest.createdBy);
-            }
-        } catch (dbError) {
-            console.error('❌ Database error getting approval request:', dbError);
-            console.error('Database error details:', {
-                message: dbError.message,
-                stack: dbError.stack,
-                name: dbError.name
-            });
-            return res.status(500).json({ 
-                message: 'Database error retrieving approval request',
-                error: dbError.message 
-            });
-        }
+        // Step 2: Get approval request
+        console.log('Step 3: Fetching approval request...');
+        const approvalRequest = await db.ApprovalRequest.findByPk(id, { transaction });
         
         if (!approvalRequest) {
-            console.log('❌ Approval request not found for ID:', id);
+            await transaction.rollback();
+            console.error('❌ Approval request not found');
             return res.status(404).json({ message: 'Approval request not found' });
         }
 
-        console.log('Current Status:', approvalRequest.status);
-        console.log('Request Type:', approvalRequest.type);
-        console.log('Request Data:', JSON.stringify(approvalRequest.requestData, null, 2));
-        console.log('Created By:', approvalRequest.createdBy);
-
         if (approvalRequest.status !== 'pending') {
-            console.log('❌ Request is not pending, current status:', approvalRequest.status);
+            await transaction.rollback();
+            console.error('❌ Request is not pending, status:', approvalRequest.status);
             return res.status(400).json({ message: 'Request is not pending' });
         }
 
-        // Execute the actual request based on type FIRST, then update status
-        console.log('Executing request of type:', approvalRequest.type);
-        
-        // Test database connection and models before proceeding
-        console.log('=== DATABASE CONNECTION TEST ===');
-        try {
-            await db.sequelize.authenticate();
-            console.log('✅ Database connection successful');
-        } catch (dbError) {
-            console.error('❌ Database connection failed:', dbError);
-            throw new Error(`Database connection failed: ${dbError.message}`);
-        }
-        
-        console.log('Available models:', Object.keys(db));
-        console.log('Stock model available:', !!db.Stock);
-        console.log('ApprovalRequest model available:', !!db.ApprovalRequest);
-        
+        console.log('✅ Found pending approval request');
+        console.log('Request type:', approvalRequest.type);
+        console.log('Request data:', JSON.stringify(approvalRequest.requestData, null, 2));
+        console.log('Created by:', approvalRequest.createdBy);
+
+        // Step 3: Execute based on type
         if (approvalRequest.type === 'stock') {
-            console.log('Executing stock request with data:', approvalRequest.requestData);
-            console.log('Created by user ID:', approvalRequest.createdBy);
+            console.log('Step 4: Processing STOCK approval...');
             
-            try {
-                // Simplified stock creation - bypass complex logic
-                console.log('=== SIMPLIFIED STOCK CREATION ===');
-                const requestData = approvalRequest.requestData;
-                console.log('Raw request data:', JSON.stringify(requestData, null, 2));
-                console.log('Request data type:', typeof requestData);
-                console.log('Request data is array:', Array.isArray(requestData));
+            const requestData = approvalRequest.requestData;
+            
+            // Validate all required fields
+            if (!requestData?.itemId || !requestData?.locationId || !requestData?.quantity || !requestData?.price) {
+                await transaction.rollback();
+                const missing = [];
+                if (!requestData?.itemId) missing.push('itemId');
+                if (!requestData?.locationId) missing.push('locationId');
+                if (!requestData?.quantity) missing.push('quantity');
+                if (!requestData?.price) missing.push('price');
                 
-                // Validate required fields before processing
-                if (!requestData) {
-                    throw new Error('Request data is null or undefined');
-                }
-                
-                if (!requestData.itemId) {
-                    throw new Error('itemId is missing from request data');
-                }
-                if (!requestData.locationId) {
-                    throw new Error('locationId is missing from request data');
-                }
-                if (!requestData.quantity) {
-                    throw new Error('quantity is missing from request data');
-                }
-                if (!requestData.price) {
-                    throw new Error('price is missing from request data');
-                }
-                
-                console.log('All required fields present, proceeding with stock creation...');
-                
-                // Create stock entry directly
-                const stockData = {
-                    itemId: parseInt(requestData.itemId),
-                    locationId: parseInt(requestData.locationId),
-                    quantity: parseInt(requestData.quantity),
-                    price: parseFloat(requestData.price),
-                    totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
-                    remarks: requestData.remarks || '',
-                    receiptAttachment: requestData.receiptAttachment || null,
-                    disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
-                    createdBy: approvalRequest.createdBy
-                };
-                
-                console.log('Stock data to create:', JSON.stringify(stockData, null, 2));
-                console.log('About to call db.Stock.create...');
-                
-                // Check if Stock model is available
-                if (!db.Stock) {
-                    throw new Error('Stock model is not available in db object');
-                }
-                console.log('Stock model is available');
-                
-                // Check if Stock.create method exists
-                if (typeof db.Stock.create !== 'function') {
-                    throw new Error('Stock.create method is not available');
-                }
-                console.log('Stock.create method is available');
-                
-                // Try to create stock with detailed error handling
-                let newStock;
-                try {
-                    console.log('Attempting to create stock with data:', stockData);
-                    newStock = await db.Stock.create(stockData);
-                    console.log('✅ Stock created successfully with ID:', newStock.id);
-                    console.log('Created stock data:', JSON.stringify(newStock.dataValues, null, 2));
-                } catch (createError) {
-                    console.error('❌ Stock creation failed with error:', createError);
-                    console.error('Error details:', {
-                        message: createError.message,
-                        name: createError.name,
-                        stack: createError.stack,
-                        sql: createError.sql,
-                        parameters: createError.parameters
-                    });
-                    throw createError;
-                }
-                
-                // Only update approval status AFTER successful stock creation
-                console.log('Updating status to approved...');
-                await db.ApprovalRequest.update({
-                    status: 'approved',
-                    approvedBy: req.user.id,
-                    approvedAt: new Date(),
-                    remarks: remarks || null
-                }, {
-                    where: { id: id }
+                console.error('❌ Missing required fields:', missing);
+                return res.status(400).json({ 
+                    message: 'Missing required fields', 
+                    missingFields: missing 
                 });
-                console.log('✅ Approval status updated successfully');
-                
-            } catch (stockError) {
-                console.error('❌ Error executing stock request:', stockError);
-                console.error('Stock error details:', {
-                    message: stockError.message,
-                    stack: stockError.stack,
-                    name: stockError.name
-                });
-                
-                // Don't update approval status if stock creation failed
-                throw new Error(`Failed to execute stock request: ${stockError.message}`);
             }
+
+            // Validate foreign key references exist
+            console.log('Step 5: Validating foreign key references...');
+            
+            const [itemExists, locationExists, userExists] = await Promise.all([
+                db.Item.findByPk(parseInt(requestData.itemId), { transaction }),
+                db.StorageLocation.findByPk(parseInt(requestData.locationId), { transaction }),
+                db.Account.findByPk(approvalRequest.createdBy, { transaction })
+            ]);
+
+            if (!itemExists) {
+                await transaction.rollback();
+                console.error('❌ Item not found:', requestData.itemId);
+                return res.status(400).json({ message: `Item with ID ${requestData.itemId} not found` });
+            }
+
+            if (!locationExists) {
+                await transaction.rollback();
+                console.error('❌ Location not found:', requestData.locationId);
+                return res.status(400).json({ message: `Location with ID ${requestData.locationId} not found` });
+            }
+
+            if (!userExists) {
+                await transaction.rollback();
+                console.error('❌ User not found:', approvalRequest.createdBy);
+                return res.status(400).json({ message: `User with ID ${approvalRequest.createdBy} not found` });
+            }
+
+            console.log('✅ All foreign key references valid');
+            console.log('Item:', itemExists.name);
+            console.log('Location:', locationExists.name);
+            console.log('User:', userExists.firstName, userExists.lastName);
+
+            // Step 6: Create stock entry
+            console.log('Step 6: Creating stock entry...');
+            
+            const stockData = {
+                itemId: parseInt(requestData.itemId),
+                locationId: parseInt(requestData.locationId),
+                quantity: parseInt(requestData.quantity),
+                price: parseFloat(requestData.price),
+                totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
+                remarks: requestData.remarks || '',
+                receiptAttachment: requestData.receiptAttachment || null,
+                disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
+                createdBy: approvalRequest.createdBy,
+                createdAt: new Date()
+            };
+
+            console.log('Creating stock with data:', JSON.stringify(stockData, null, 2));
+            
+            const newStock = await db.Stock.create(stockData, { transaction });
+            console.log('✅ Stock created successfully with ID:', newStock.id);
+
+            // Step 7: Update approval status
+            console.log('Step 7: Updating approval status...');
+            
+            await db.ApprovalRequest.update({
+                status: 'approved',
+                approvedBy: req.user.id,
+                approvedAt: new Date(),
+                remarks: remarks || null
+            }, {
+                where: { id: id },
+                transaction
+            });
+
+            console.log('✅ Approval status updated successfully');
+
+            // Step 8: Commit transaction
+            await transaction.commit();
+            console.log('✅ Transaction committed successfully');
+
+            // Step 9: Return success response
+            const response = {
+                id: approvalRequest.id,
+                type: approvalRequest.type,
+                status: 'approved',
+                message: 'Stock entry created successfully',
+                stockId: newStock.id,
+                stockData: {
+                    id: newStock.id,
+                    itemId: newStock.itemId,
+                    itemName: itemExists.name,
+                    locationId: newStock.locationId,
+                    locationName: locationExists.name,
+                    quantity: newStock.quantity,
+                    price: newStock.price,
+                    totalPrice: newStock.totalPrice,
+                    remarks: newStock.remarks,
+                    createdBy: newStock.createdBy,
+                    createdByName: `${userExists.firstName} ${userExists.lastName}`,
+                    createdAt: newStock.createdAt
+                },
+                approvedBy: req.user.id,
+                approvedAt: new Date(),
+                remarks: remarks || null
+            };
+
+            console.log('✅ APPROVAL WORKFLOW COMPLETED SUCCESSFULLY');
+            console.log('Response:', JSON.stringify(response, null, 2));
+            
+            return res.json(response);
+
         } else if (approvalRequest.type === 'dispose') {
-            console.log('Executing dispose request...');
-            console.log('Dispose request data:', JSON.stringify(approvalRequest.requestData, null, 2));
+            console.log('Step 4: Processing DISPOSE approval...');
             
-            try {
-                // Check if dispose service is available
-                if (!disposeService) {
-                    throw new Error('Dispose service is not available');
-                }
-                console.log('Dispose service is available');
-                
-                // Check if disposeService.create method exists
-                if (typeof disposeService.create !== 'function') {
-                    throw new Error('disposeService.create method is not available');
-                }
-                console.log('disposeService.create method is available');
-                
-                // Execute dispose request
-                const disposeResult = await disposeService.create(approvalRequest.requestData);
-                console.log('✅ Dispose request executed successfully:', disposeResult);
-                
-                // Only update approval status AFTER successful dispose execution
-                console.log('Updating status to approved...');
-                await db.ApprovalRequest.update({
-                    status: 'approved',
-                    approvedBy: req.user.id,
-                    approvedAt: new Date(),
-                    remarks: remarks || null
-                }, {
-                    where: { id: id }
-                });
-                console.log('✅ Approval status updated successfully');
-                
-            } catch (disposeError) {
-                console.error('❌ Error executing dispose request:', disposeError);
-                console.error('Dispose error details:', {
-                    message: disposeError.message,
-                    stack: disposeError.stack,
-                    name: disposeError.name
-                });
-                // Don't update approval status if dispose execution failed
-                throw new Error(`Failed to execute dispose request: ${disposeError.message}`);
-            }
+            // Execute dispose request
+            const disposeResult = await disposeService.create(approvalRequest.requestData, approvalRequest.createdBy);
+            console.log('✅ Dispose request executed successfully');
+
+            // Update approval status
+            await db.ApprovalRequest.update({
+                status: 'approved',
+                approvedBy: req.user.id,
+                approvedAt: new Date(),
+                remarks: remarks || null
+            }, {
+                where: { id: id },
+                transaction
+            });
+
+            await transaction.commit();
+            console.log('✅ Dispose approval completed successfully');
+
+            return res.json({
+                id: approvalRequest.id,
+                type: approvalRequest.type,
+                status: 'approved',
+                message: 'Dispose request executed successfully',
+                disposeId: disposeResult.id,
+                approvedBy: req.user.id,
+                approvedAt: new Date(),
+                remarks: remarks || null
+            });
+
         } else {
-            console.log('❌ Unknown request type:', approvalRequest.type);
+            await transaction.rollback();
+            console.error('❌ Unknown request type:', approvalRequest.type);
             return res.status(400).json({ message: 'Unknown request type' });
         }
 
-        // Get the updated request with simple query
-        try {
-            const updatedRequest = await db.ApprovalRequest.findByPk(id);
-            console.log('✅ Approval completed successfully');
-            res.json({
-                id: updatedRequest.id,
-                type: updatedRequest.type,
-                status: updatedRequest.status,
-                requestData: updatedRequest.requestData,
-                createdBy: updatedRequest.createdBy,
-                approvedBy: updatedRequest.approvedBy,
-                approvedAt: updatedRequest.approvedAt,
-                remarks: updatedRequest.remarks,
-                createdAt: updatedRequest.createdAt,
-                updatedAt: updatedRequest.updatedAt
-            });
-        } catch (responseError) {
-            console.error('❌ Error getting updated request:', responseError);
-            res.json({ message: 'Approval completed successfully' });
-        }
     } catch (error) {
-        console.error('❌ Error in approve function:', error);
-        console.error('Error stack:', error.stack);
-        console.error('Error message:', error.message);
+        await transaction.rollback();
+        console.error('❌ APPROVAL WORKFLOW FAILED');
+        console.error('Error:', error.message);
+        console.error('Stack:', error.stack);
         
-        // Return a more detailed error response
-        res.status(500).json({
+        if (error.name === 'SequelizeForeignKeyConstraintError') {
+            console.error('❌ Foreign key constraint error');
+            return res.status(400).json({
+                message: 'Foreign key constraint error - referenced item, location, or user not found',
+                error: error.message,
+                type: 'FOREIGN_KEY_ERROR'
+            });
+        }
+        
+        if (error.name === 'SequelizeValidationError') {
+            console.error('❌ Validation error');
+            return res.status(400).json({
+                message: 'Data validation error',
+                errors: error.errors?.map(e => e.message) || [error.message],
+                type: 'VALIDATION_ERROR'
+            });
+        }
+        
+        return res.status(500).json({
             message: 'Internal server error during approval',
             error: error.message,
+            type: 'INTERNAL_ERROR',
             timestamp: new Date().toISOString()
         });
     }
