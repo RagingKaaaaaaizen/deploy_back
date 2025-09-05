@@ -38,7 +38,7 @@ module.exports = {
     deactivateAccount
 };
 
-async function authenticate({ email, password, ipAddress }) {
+async function authenticate({ email, password, ipAddress, userAgent }) {
     // Always lowercase emails for consistency
     email = email.toLowerCase();
 
@@ -65,6 +65,19 @@ async function authenticate({ email, password, ipAddress }) {
     const jwtToken = generateJwtToken(account);
     const refreshToken = generateRefreshToken(account, ipAddress);
     await refreshToken.save();
+
+    // Log LOGIN event
+    const activityLogService = require('../activity-log/activity-log.service');
+    await activityLogService.logActivity({
+        userId: account.id,
+        action: 'LOGIN',
+        entityType: 'ACCOUNT',
+        entityId: account.id,
+        entityName: `${account.firstName} ${account.lastName}`,
+        details: { email: account.email },
+        ipAddress,
+        userAgent: userAgent || ''
+    });
 
     return {
         ...basicDetails(account),
