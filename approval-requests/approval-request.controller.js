@@ -3,6 +3,61 @@ const approvalRequestService = require('./approval-request.service');
 const stockService = require('../stock/stock.service');
 const disposeService = require('../dispose/dispose.service');
 
+// Simple test endpoint without authentication
+exports.test = async (req, res) => {
+    try {
+        console.log('Test endpoint called');
+        
+        // Test database connection
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Test models
+        const models = Object.keys(db);
+        console.log('Available models:', models);
+        
+        // Test Stock model
+        const stockModelAvailable = !!db.Stock;
+        console.log('Stock model available:', stockModelAvailable);
+        
+        // Test ApprovalRequest model
+        const approvalModelAvailable = !!db.ApprovalRequest;
+        console.log('ApprovalRequest model available:', approvalModelAvailable);
+        
+        // Test if we can query approval requests
+        let pendingCount = 0;
+        if (approvalModelAvailable) {
+            try {
+                const pendingRequests = await db.ApprovalRequest.findAll({
+                    where: { status: 'pending' }
+                });
+                pendingCount = pendingRequests.length;
+                console.log('Found', pendingCount, 'pending approval requests');
+            } catch (queryError) {
+                console.error('Error querying approval requests:', queryError);
+            }
+        }
+        
+        res.json({ 
+            message: 'Approval requests test endpoint is working!',
+            timestamp: new Date(),
+            environment: process.env.NODE_ENV || 'development',
+            database: 'connected',
+            models: models,
+            stockModel: stockModelAvailable,
+            approvalModel: approvalModelAvailable,
+            pendingRequests: pendingCount
+        });
+    } catch (error) {
+        console.error('Test endpoint error:', error);
+        res.status(500).json({ 
+            message: 'Test endpoint failed',
+            error: error.message,
+            stack: error.stack
+        });
+    }
+};
+
 // Test endpoint to check stock service
 exports.testStockService = async (req, res) => {
     try {
@@ -241,6 +296,21 @@ exports.approve = async (req, res, next) => {
 
         // Execute the actual request based on type FIRST, then update status
         console.log('Executing request of type:', approvalRequest.type);
+        
+        // Test database connection and models before proceeding
+        console.log('=== DATABASE CONNECTION TEST ===');
+        try {
+            await db.sequelize.authenticate();
+            console.log('✅ Database connection successful');
+        } catch (dbError) {
+            console.error('❌ Database connection failed:', dbError);
+            throw new Error(`Database connection failed: ${dbError.message}`);
+        }
+        
+        console.log('Available models:', Object.keys(db));
+        console.log('Stock model available:', !!db.Stock);
+        console.log('ApprovalRequest model available:', !!db.ApprovalRequest);
+        
         if (approvalRequest.type === 'stock') {
             console.log('Executing stock request with data:', approvalRequest.requestData);
             console.log('Created by user ID:', approvalRequest.createdBy);

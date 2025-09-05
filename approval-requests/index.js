@@ -33,14 +33,7 @@ function rejectRequestSchema(req, res, next) {
 }
 
 // Test endpoint without authentication
-router.get('/test', (req, res) => {
-    res.json({ 
-        message: 'Approval requests endpoint is working!', 
-        timestamp: new Date(),
-        status: 'OK',
-        endpoint: '/api/approval-requests/test'
-    });
-});
+router.get('/test', controller.test);
 
 // Test stock service endpoint
 router.get('/test-stock-service', controller.testStockService);
