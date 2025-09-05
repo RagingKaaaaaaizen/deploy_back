@@ -18,11 +18,17 @@ async function startServer() {
         // Wait for database to be ready
         await new Promise(resolve => {
             const checkDb = () => {
-                if (db.sequelize && db.RoomLocation && db.PC) {
-                    console.log('✅ Database and models are ready');
+                const requiredModels = ['sequelize', 'Stock', 'ApprovalRequest', 'Account', 'Item', 'StorageLocation', 'RoomLocation', 'PC'];
+                const missingModels = requiredModels.filter(model => !db[model]);
+                
+                if (missingModels.length === 0) {
+                    console.log('✅ Database and all required models are ready');
+                    console.log('Available models:', Object.keys(db));
                     resolve();
                 } else {
                     console.log('⏳ Waiting for database and models to be ready...');
+                    console.log('Missing models:', missingModels);
+                    console.log('Available models:', Object.keys(db));
                     setTimeout(checkDb, 100);
                 }
             };

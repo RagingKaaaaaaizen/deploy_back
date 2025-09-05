@@ -35,6 +35,9 @@ function rejectRequestSchema(req, res, next) {
 // Test endpoint without authentication
 router.get('/test', controller.test);
 
+// Comprehensive backend test endpoint
+router.get('/test-backend', controller.testBackend);
+
 // Test stock service endpoint
 router.get('/test-stock-service', controller.testStockService);
 
@@ -43,6 +46,9 @@ router.get('/test-database', controller.testDatabase);
 
 // Test data flow endpoint
 router.get('/test-data-flow', controller.testDataFlow);
+
+// Test approval simulation endpoint
+router.get('/test-approval-simulation', controller.testApprovalSimulation);
 
 // Test stock creation endpoint
 router.get('/test-stock-creation', controller.testStockCreation);

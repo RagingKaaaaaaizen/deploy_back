@@ -3,6 +3,137 @@ const approvalRequestService = require('./approval-request.service');
 const stockService = require('../stock/stock.service');
 const disposeService = require('../dispose/dispose.service');
 
+// Comprehensive backend test endpoint
+exports.testBackend = async (req, res) => {
+    try {
+        console.log('=== COMPREHENSIVE BACKEND TEST ===');
+        
+        // Test 1: Database connection
+        console.log('Test 1: Database connection...');
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Test 2: Check all models
+        console.log('Test 2: Checking models...');
+        const models = Object.keys(db);
+        console.log('Available models:', models);
+        
+        const requiredModels = ['Stock', 'ApprovalRequest', 'Account', 'Item', 'StorageLocation'];
+        const missingModels = requiredModels.filter(model => !db[model]);
+        
+        if (missingModels.length > 0) {
+            return res.status(500).json({
+                message: 'Missing required models',
+                missingModels: missingModels,
+                availableModels: models
+            });
+        }
+        console.log('✅ All required models available');
+        
+        // Test 3: Check model methods
+        console.log('Test 3: Checking model methods...');
+        const stockMethods = Object.getOwnPropertyNames(db.Stock);
+        const approvalMethods = Object.getOwnPropertyNames(db.ApprovalRequest);
+        
+        console.log('Stock model methods:', stockMethods);
+        console.log('ApprovalRequest model methods:', approvalMethods);
+        
+        if (!stockMethods.includes('create') || !approvalMethods.includes('create')) {
+            return res.status(500).json({
+                message: 'Missing required model methods',
+                stockMethods: stockMethods,
+                approvalMethods: approvalMethods
+            });
+        }
+        console.log('✅ All required model methods available');
+        
+        // Test 4: Check database tables
+        console.log('Test 4: Checking database tables...');
+        const [results] = await db.sequelize.query("SHOW TABLES");
+        const tableNames = results.map(row => Object.values(row)[0]);
+        console.log('Database tables:', tableNames);
+        
+        const requiredTables = ['stocks', 'approval_requests', 'accounts', 'items', 'storage_locations'];
+        const missingTables = requiredTables.filter(table => !tableNames.includes(table));
+        
+        if (missingTables.length > 0) {
+            return res.status(500).json({
+                message: 'Missing required database tables',
+                missingTables: missingTables,
+                availableTables: tableNames
+            });
+        }
+        console.log('✅ All required tables exist');
+        
+        // Test 5: Check sample data
+        console.log('Test 5: Checking sample data...');
+        const stockCount = await db.Stock.count();
+        const approvalCount = await db.ApprovalRequest.count();
+        const accountCount = await db.Account.count();
+        const itemCount = await db.Item.count();
+        const locationCount = await db.StorageLocation.count();
+        
+        console.log('Data counts:', {
+            stocks: stockCount,
+            approvals: approvalCount,
+            accounts: accountCount,
+            items: itemCount,
+            locations: locationCount
+        });
+        
+        // Test 6: Check pending approvals
+        const pendingApprovals = await db.ApprovalRequest.findAll({
+            where: { status: 'pending' },
+            limit: 5
+        });
+        
+        console.log('Pending approvals:', pendingApprovals.length);
+        if (pendingApprovals.length > 0) {
+            console.log('Sample pending approval:', {
+                id: pendingApprovals[0].id,
+                type: pendingApprovals[0].type,
+                status: pendingApprovals[0].status,
+                requestData: pendingApprovals[0].requestData
+            });
+        }
+        
+        res.json({
+            message: 'Backend test successful!',
+            database: 'connected',
+            models: models,
+            requiredModels: requiredModels,
+            stockMethods: stockMethods,
+            approvalMethods: approvalMethods,
+            tables: tableNames,
+            requiredTables: requiredTables,
+            dataCounts: {
+                stocks: stockCount,
+                approvals: approvalCount,
+                accounts: accountCount,
+                items: itemCount,
+                locations: locationCount
+            },
+            pendingApprovals: pendingApprovals.length,
+            sampleApproval: pendingApprovals.length > 0 ? {
+                id: pendingApprovals[0].id,
+                type: pendingApprovals[0].type,
+                status: pendingApprovals[0].status,
+                requestData: pendingApprovals[0].requestData
+            } : null,
+            timestamp: new Date()
+        });
+        
+    } catch (error) {
+        console.error('❌ Backend test failed:', error);
+        res.status(500).json({
+            message: 'Backend test failed',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 // Simple test endpoint without authentication
 exports.test = async (req, res) => {
     try {
@@ -120,6 +251,131 @@ exports.testDatabase = async (req, res) => {
 };
 
 // Test endpoint to simulate approval process
+// Test exact approval process simulation
+exports.testApprovalSimulation = async (req, res) => {
+    try {
+        console.log('=== TESTING EXACT APPROVAL PROCESS SIMULATION ===');
+        
+        // Test 1: Database connection
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Test 2: Get a pending approval request
+        const pendingRequest = await db.ApprovalRequest.findOne({
+            where: { 
+                status: 'pending',
+                type: 'stock'
+            }
+        });
+        
+        if (!pendingRequest) {
+            return res.json({
+                message: 'No pending stock approval requests found for testing',
+                timestamp: new Date()
+            });
+        }
+        
+        console.log('Found pending request:', pendingRequest.id);
+        console.log('Request data:', JSON.stringify(pendingRequest.requestData, null, 2));
+        
+        // Test 3: Simulate the exact approval process
+        const requestData = pendingRequest.requestData;
+        
+        // Validate required fields (same as in approval function)
+        if (!requestData) {
+            throw new Error('Request data is null or undefined');
+        }
+        
+        if (!requestData.itemId) {
+            throw new Error('itemId is missing from request data');
+        }
+        if (!requestData.locationId) {
+            throw new Error('locationId is missing from request data');
+        }
+        if (!requestData.quantity) {
+            throw new Error('quantity is missing from request data');
+        }
+        if (!requestData.price) {
+            throw new Error('price is missing from request data');
+        }
+        
+        console.log('✅ All required fields present');
+        
+        // Test 4: Transform data (same as in approval function)
+        const stockData = {
+            itemId: parseInt(requestData.itemId),
+            locationId: parseInt(requestData.locationId),
+            quantity: parseInt(requestData.quantity),
+            price: parseFloat(requestData.price),
+            totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
+            remarks: requestData.remarks || '',
+            receiptAttachment: requestData.receiptAttachment || null,
+            disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
+            createdBy: pendingRequest.createdBy
+        };
+        
+        console.log('Transformed stock data:', JSON.stringify(stockData, null, 2));
+        
+        // Test 5: Check if Stock model is available
+        if (!db.Stock) {
+            throw new Error('Stock model is not available in db object');
+        }
+        console.log('✅ Stock model is available');
+        
+        if (typeof db.Stock.create !== 'function') {
+            throw new Error('Stock.create method is not available');
+        }
+        console.log('✅ Stock.create method is available');
+        
+        // Test 6: Try to create stock entry (without actually creating it)
+        console.log('Testing stock creation validation...');
+        
+        // Check if the referenced items exist
+        const itemExists = await db.Item.findByPk(stockData.itemId);
+        if (!itemExists) {
+            throw new Error(`Item with ID ${stockData.itemId} does not exist`);
+        }
+        console.log('✅ Item exists:', itemExists.name);
+        
+        const locationExists = await db.StorageLocation.findByPk(stockData.locationId);
+        if (!locationExists) {
+            throw new Error(`Storage location with ID ${stockData.locationId} does not exist`);
+        }
+        console.log('✅ Storage location exists:', locationExists.name);
+        
+        const userExists = await db.Account.findByPk(stockData.createdBy);
+        if (!userExists) {
+            throw new Error(`User with ID ${stockData.createdBy} does not exist`);
+        }
+        console.log('✅ User exists:', userExists.firstName, userExists.lastName);
+        
+        res.json({
+            message: 'Approval process simulation successful!',
+            approvalRequestId: pendingRequest.id,
+            originalRequestData: requestData,
+            transformedStockData: stockData,
+            validationResults: {
+                itemExists: true,
+                locationExists: true,
+                userExists: true,
+                itemName: itemExists.name,
+                locationName: locationExists.name,
+                userName: `${userExists.firstName} ${userExists.lastName}`
+            },
+            timestamp: new Date()
+        });
+        
+    } catch (error) {
+        console.error('❌ Approval process simulation failed:', error);
+        res.status(500).json({
+            message: 'Approval process simulation failed',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 // Test data flow endpoint - shows how data flows from approval to stock creation
 exports.testDataFlow = async (req, res) => {
     try {
