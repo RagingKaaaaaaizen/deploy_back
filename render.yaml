@@ -31,4 +31,4 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: FRONTEND_URL
-        value: https://computer-lab-inventory-frontend.onrender.com
+        value: https://computer-lab-inventory-frontend-wnxh.onrender.com
