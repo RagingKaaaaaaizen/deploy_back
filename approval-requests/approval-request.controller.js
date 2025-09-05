@@ -3,6 +3,205 @@ const approvalRequestService = require('./approval-request.service');
 const stockService = require('../stock/stock.service');
 const disposeService = require('../dispose/dispose.service');
 
+// Deep database and Sequelize test endpoint
+exports.testDatabaseDeep = async (req, res) => {
+    try {
+        console.log('=== DEEP DATABASE AND SEQUELIZE TEST ===');
+        
+        // Test 1: Basic database connection
+        console.log('Test 1: Basic database connection...');
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Test 2: Check Sequelize sync status
+        console.log('Test 2: Checking Sequelize sync status...');
+        try {
+            // Force a basic sync check
+            await db.sequelize.sync({ alter: false, force: false });
+            console.log('✅ Sequelize sync check passed');
+        } catch (syncError) {
+            console.error('❌ Sequelize sync error:', syncError);
+            return res.status(500).json({
+                message: 'Sequelize sync failed',
+                error: syncError.message,
+                stack: syncError.stack
+            });
+        }
+        
+        // Test 3: Check if Stock table exists and structure
+        console.log('Test 3: Checking Stock table structure...');
+        try {
+            const [stockTableInfo] = await db.sequelize.query("DESCRIBE stocks");
+            console.log('✅ Stock table structure:', stockTableInfo);
+            
+            const [approvalTableInfo] = await db.sequelize.query("DESCRIBE approval_requests");
+            console.log('✅ Approval requests table structure:', approvalTableInfo);
+        } catch (describeError) {
+            console.error('❌ Error describing tables:', describeError);
+            return res.status(500).json({
+                message: 'Failed to describe database tables',
+                error: describeError.message
+            });
+        }
+        
+        // Test 4: Test raw SQL insert into stocks table
+        console.log('Test 4: Testing raw SQL insert into stocks table...');
+        try {
+            const testInsertSQL = `
+                INSERT INTO stocks (itemId, locationId, quantity, price, totalPrice, remarks, receiptAttachment, disposeId, createdBy, createdAt)
+                VALUES (1, 1, 1, 10.00, 10.00, 'Test raw SQL insert', NULL, NULL, 1, NOW())
+            `;
+            
+            const [insertResult] = await db.sequelize.query(testInsertSQL);
+            console.log('✅ Raw SQL insert successful:', insertResult);
+            
+            // Clean up the test insert
+            const deleteSQL = `DELETE FROM stocks WHERE remarks = 'Test raw SQL insert'`;
+            await db.sequelize.query(deleteSQL);
+            console.log('✅ Test insert cleaned up');
+        } catch (rawSQLError) {
+            console.error('❌ Raw SQL insert failed:', rawSQLError);
+            console.error('SQL Error details:', {
+                message: rawSQLError.message,
+                sql: rawSQLError.sql,
+                parameters: rawSQLError.parameters
+            });
+        }
+        
+        // Test 5: Test Sequelize model create with minimal data
+        console.log('Test 5: Testing Sequelize Stock.create with minimal data...');
+        try {
+            const minimalStockData = {
+                itemId: 1,
+                locationId: 1,
+                quantity: 1,
+                price: 10.00,
+                totalPrice: 10.00,
+                createdBy: 1
+            };
+            
+            console.log('Creating with minimal data:', minimalStockData);
+            const testStock = await db.Stock.create(minimalStockData);
+            console.log('✅ Sequelize Stock.create successful:', testStock.id);
+            
+            // Clean up
+            await testStock.destroy();
+            console.log('✅ Test stock cleaned up');
+        } catch (sequelizeCreateError) {
+            console.error('❌ Sequelize Stock.create failed:', sequelizeCreateError);
+            console.error('Sequelize Error details:', {
+                message: sequelizeCreateError.message,
+                name: sequelizeCreateError.name,
+                sql: sequelizeCreateError.sql,
+                parameters: sequelizeCreateError.parameters,
+                original: sequelizeCreateError.original
+            });
+        }
+        
+        // Test 6: Check foreign key constraints
+        console.log('Test 6: Checking foreign key constraints...');
+        try {
+            // Check if referenced items exist
+            const itemCount = await db.Item.count();
+            const locationCount = await db.StorageLocation.count();
+            const accountCount = await db.Account.count();
+            
+            console.log('Foreign key reference counts:', {
+                items: itemCount,
+                locations: locationCount,
+                accounts: accountCount
+            });
+            
+            if (itemCount === 0) {
+                console.warn('⚠️ No items found - this might cause foreign key errors');
+            }
+            if (locationCount === 0) {
+                console.warn('⚠️ No storage locations found - this might cause foreign key errors');
+            }
+            if (accountCount === 0) {
+                console.warn('⚠️ No accounts found - this might cause foreign key errors');
+            }
+        } catch (fkError) {
+            console.error('❌ Foreign key check failed:', fkError);
+        }
+        
+        // Test 7: Test approval to stock flow with actual pending request
+        console.log('Test 7: Testing approval to stock flow...');
+        const pendingRequest = await db.ApprovalRequest.findOne({
+            where: { 
+                status: 'pending',
+                type: 'stock'
+            }
+        });
+        
+        let approvalFlowTest = null;
+        if (pendingRequest) {
+            console.log('Found pending request for testing:', pendingRequest.id);
+            
+            try {
+                const requestData = pendingRequest.requestData;
+                const stockData = {
+                    itemId: parseInt(requestData.itemId),
+                    locationId: parseInt(requestData.locationId),
+                    quantity: parseInt(requestData.quantity),
+                    price: parseFloat(requestData.price),
+                    totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
+                    remarks: requestData.remarks || '',
+                    receiptAttachment: requestData.receiptAttachment || null,
+                    disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
+                    createdBy: pendingRequest.createdBy
+                };
+                
+                console.log('Testing with stock data:', stockData);
+                
+                // Try to create the stock (for testing only, not actually saving)
+                const testStock = await db.Stock.build(stockData);
+                await testStock.validate();
+                console.log('✅ Stock data validation passed');
+                
+                approvalFlowTest = {
+                    valid: true,
+                    message: 'Approval flow data is valid'
+                };
+            } catch (flowError) {
+                console.error('❌ Approval flow test failed:', flowError);
+                approvalFlowTest = {
+                    valid: false,
+                    error: flowError.message
+                };
+            }
+        } else {
+            approvalFlowTest = {
+                valid: false,
+                message: 'No pending stock requests found for testing'
+            };
+        }
+        
+        res.json({
+            message: 'Deep database test completed!',
+            tests: {
+                databaseConnection: 'passed',
+                sequelizeSync: 'passed',
+                tableStructures: 'checked',
+                rawSQLInsert: 'tested',
+                sequelizeCreate: 'tested',
+                foreignKeyChecks: 'completed',
+                approvalFlowTest: approvalFlowTest
+            },
+            timestamp: new Date()
+        });
+        
+    } catch (error) {
+        console.error('❌ Deep database test failed:', error);
+        res.status(500).json({
+            message: 'Deep database test failed',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 // Comprehensive backend test endpoint
 exports.testBackend = async (req, res) => {
     try {

@@ -35,6 +35,9 @@ function rejectRequestSchema(req, res, next) {
 // Test endpoint without authentication
 router.get('/test', controller.test);
 
+// Deep database test endpoint
+router.get('/test-database-deep', controller.testDatabaseDeep);
+
 // Comprehensive backend test endpoint
 router.get('/test-backend', controller.testBackend);
 
