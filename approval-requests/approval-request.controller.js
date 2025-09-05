@@ -120,6 +120,59 @@ exports.testDatabase = async (req, res) => {
 };
 
 // Test endpoint to simulate approval process
+// Test stock creation endpoint
+exports.testStockCreation = async (req, res) => {
+    try {
+        console.log('Testing stock creation...');
+        
+        // Test database connection
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Test Stock model
+        if (!db.Stock) {
+            throw new Error('Stock model is not available');
+        }
+        console.log('✅ Stock model is available');
+        
+        // Test creating a simple stock entry
+        const testStockData = {
+            itemId: 1,
+            locationId: 1,
+            quantity: 1,
+            price: 10.00,
+            totalPrice: 10.00,
+            remarks: 'Test stock entry',
+            receiptAttachment: null,
+            disposeId: null,
+            createdBy: 1
+        };
+        
+        console.log('Creating test stock with data:', testStockData);
+        const testStock = await db.Stock.create(testStockData);
+        console.log('✅ Test stock created successfully with ID:', testStock.id);
+        
+        // Clean up test stock
+        await db.Stock.destroy({ where: { id: testStock.id } });
+        console.log('✅ Test stock cleaned up');
+        
+        res.json({
+            message: 'Stock creation test successful!',
+            testStockId: testStock.id,
+            timestamp: new Date()
+        });
+        
+    } catch (error) {
+        console.error('❌ Stock creation test failed:', error);
+        res.status(500).json({
+            message: 'Stock creation test failed',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 exports.testApprovalProcess = async (req, res) => {
     try {
         console.log('Testing approval process...');
@@ -371,8 +424,24 @@ exports.approve = async (req, res, next) => {
                 }
                 console.log('Stock.create method is available');
                 
-                const newStock = await db.Stock.create(stockData);
-                console.log('✅ Stock created successfully with ID:', newStock.id);
+                // Try to create stock with detailed error handling
+                let newStock;
+                try {
+                    console.log('Attempting to create stock with data:', stockData);
+                    newStock = await db.Stock.create(stockData);
+                    console.log('✅ Stock created successfully with ID:', newStock.id);
+                    console.log('Created stock data:', JSON.stringify(newStock.dataValues, null, 2));
+                } catch (createError) {
+                    console.error('❌ Stock creation failed with error:', createError);
+                    console.error('Error details:', {
+                        message: createError.message,
+                        name: createError.name,
+                        stack: createError.stack,
+                        sql: createError.sql,
+                        parameters: createError.parameters
+                    });
+                    throw createError;
+                }
                 
                 // Only update approval status AFTER successful stock creation
                 console.log('Updating status to approved...');
