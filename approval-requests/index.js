@@ -41,6 +41,9 @@ router.get('/test-stock-service', controller.testStockService);
 // Test database endpoint
 router.get('/test-database', controller.testDatabase);
 
+// Test data flow endpoint
+router.get('/test-data-flow', controller.testDataFlow);
+
 // Test stock creation endpoint
 router.get('/test-stock-creation', controller.testStockCreation);
 

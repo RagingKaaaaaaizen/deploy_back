@@ -120,6 +120,90 @@ exports.testDatabase = async (req, res) => {
 };
 
 // Test endpoint to simulate approval process
+// Test data flow endpoint - shows how data flows from approval to stock creation
+exports.testDataFlow = async (req, res) => {
+    try {
+        console.log('Testing data flow from approval to stock creation...');
+        
+        // Test database connection
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection successful');
+        
+        // Get the first pending stock approval request
+        const pendingStockRequest = await db.ApprovalRequest.findOne({
+            where: { 
+                status: 'pending',
+                type: 'stock'
+            }
+        });
+        
+        if (!pendingStockRequest) {
+            return res.json({
+                message: 'No pending stock approval requests found',
+                timestamp: new Date()
+            });
+        }
+        
+        console.log('Found pending stock request:', pendingStockRequest.id);
+        console.log('Request data:', JSON.stringify(pendingStockRequest.requestData, null, 2));
+        
+        // Simulate the data transformation that happens during approval
+        const requestData = pendingStockRequest.requestData;
+        const stockData = {
+            itemId: parseInt(requestData.itemId),
+            locationId: parseInt(requestData.locationId),
+            quantity: parseInt(requestData.quantity),
+            price: parseFloat(requestData.price),
+            totalPrice: parseInt(requestData.quantity) * parseFloat(requestData.price),
+            remarks: requestData.remarks || '',
+            receiptAttachment: requestData.receiptAttachment || null,
+            disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
+            createdBy: pendingStockRequest.createdBy
+        };
+        
+        console.log('Transformed stock data:', JSON.stringify(stockData, null, 2));
+        
+        // Test if we can create the stock entry (without actually creating it)
+        console.log('Testing stock creation validation...');
+        
+        // Validate required fields
+        const validationErrors = [];
+        if (!stockData.itemId) validationErrors.push('itemId is missing');
+        if (!stockData.locationId) validationErrors.push('locationId is missing');
+        if (!stockData.quantity) validationErrors.push('quantity is missing');
+        if (!stockData.price) validationErrors.push('price is missing');
+        if (!stockData.createdBy) validationErrors.push('createdBy is missing');
+        
+        if (validationErrors.length > 0) {
+            return res.json({
+                message: 'Data validation failed',
+                errors: validationErrors,
+                requestData: requestData,
+                stockData: stockData,
+                timestamp: new Date()
+            });
+        }
+        
+        res.json({
+            message: 'Data flow test successful!',
+            approvalRequestId: pendingStockRequest.id,
+            originalRequestData: requestData,
+            transformedStockData: stockData,
+            validationPassed: true,
+            timestamp: new Date()
+        });
+        
+    } catch (error) {
+        console.error('❌ Data flow test failed:', error);
+        res.status(500).json({
+            message: 'Data flow test failed',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date()
+        });
+    }
+};
+
 // Test stock creation endpoint
 exports.testStockCreation = async (req, res) => {
     try {
