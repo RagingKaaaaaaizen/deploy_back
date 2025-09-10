@@ -31,13 +31,24 @@ exports.addStock = async (req, res, next) => {
         // Check user role - Staff needs approval, Admin/SuperAdmin can bypass
         if (req.user.role === 'Staff') {
             // Create approval request for staff
+            console.log('=== STOCK CONTROLLER DEBUG ===');
+            console.log('req.body received:', JSON.stringify(req.body, null, 2));
+            console.log('req.body.itemId:', req.body.itemId, 'type:', typeof req.body.itemId);
+            console.log('req.body.quantity:', req.body.quantity, 'type:', typeof req.body.quantity);
+            console.log('req.body.price:', req.body.price, 'type:', typeof req.body.price);
+            console.log('req.body.locationId:', req.body.locationId, 'type:', typeof req.body.locationId);
+            
             const approvalRequestData = {
                 type: 'stock',
                 requestData: req.body,
                 createdBy: req.user.id
             };
 
+            console.log('Approval request data to save:', JSON.stringify(approvalRequestData, null, 2));
+
             const approvalRequest = await approvalRequestService.create(approvalRequestData);
+            
+            console.log('Created approval request:', JSON.stringify(approvalRequest, null, 2));
             
             return res.status(201).send({
                 message: 'Stock entry submitted for approval',
