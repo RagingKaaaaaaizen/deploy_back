@@ -1273,16 +1273,16 @@ async function executeStockRequest(requestData, createdBy) {
     console.log('Is Array:', Array.isArray(requestData));
     
     try {
-        // Handle multiple stock entries
-        if (Array.isArray(requestData)) {
+    // Handle multiple stock entries
+    if (Array.isArray(requestData)) {
             console.log('Processing array of stock entries...');
             for (let i = 0; i < requestData.length; i++) {
                 console.log(`Processing stock entry ${i + 1}:`, JSON.stringify(requestData[i], null, 2));
                 const cleanedData = cleanStockData(requestData[i]);
                 await stockService.create(cleanedData, createdBy);
                 console.log(`✅ Stock entry ${i + 1} created successfully`);
-            }
-        } else {
+        }
+    } else {
             console.log('Processing single stock entry...');
             console.log('Stock data to create:', JSON.stringify(requestData, null, 2));
             console.log('User ID for creation:', createdBy);

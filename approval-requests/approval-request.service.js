@@ -76,7 +76,13 @@ async function getById(id) {
         }
 
         // Add detailed information based on request type
+        console.log('=== BACKEND ENHANCEMENT DEBUG ===');
+        console.log('approvalRequest.type:', approvalRequest.type);
+        console.log('enhancedRequestData.itemId:', enhancedRequestData.itemId);
+        
         if (approvalRequest.type === 'stock' && enhancedRequestData.itemId) {
+            console.log('✅ Processing stock enhancement for itemId:', enhancedRequestData.itemId);
+            
             // Get item details
             const item = await db.Item.findByPk(enhancedRequestData.itemId, {
                 include: [
@@ -84,6 +90,8 @@ async function getById(id) {
                     { model: db.Brand, attributes: ['id', 'name'] }
                 ]
             });
+            
+            console.log('Found item:', item ? item.name : 'NOT FOUND');
 
             if (item) {
                 enhancedRequestData.itemDetails = {
@@ -105,13 +113,17 @@ async function getById(id) {
 
             // Get storage location details
             if (enhancedRequestData.locationId) {
+                console.log('✅ Processing location enhancement for locationId:', enhancedRequestData.locationId);
                 const location = await db.StorageLocation.findByPk(enhancedRequestData.locationId);
+                console.log('Found location:', location ? location.name : 'NOT FOUND');
+                
                 if (location) {
                     enhancedRequestData.locationDetails = {
                         id: location.id,
                         name: location.name,
                         description: location.description
                     };
+                    console.log('✅ Added location details:', enhancedRequestData.locationDetails);
                 }
             }
 
