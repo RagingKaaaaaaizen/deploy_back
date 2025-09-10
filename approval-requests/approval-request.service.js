@@ -86,8 +86,8 @@ async function getById(id) {
             // Get item details
             const item = await db.Item.findByPk(enhancedRequestData.itemId, {
                 include: [
-                    { model: db.Category, attributes: ['id', 'name'] },
-                    { model: db.Brand, attributes: ['id', 'name'] }
+                    { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                    { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
                 ]
             });
             
@@ -100,13 +100,13 @@ async function getById(id) {
                     description: item.description,
                     model: item.model,
                     serialNumber: item.serialNumber,
-                    category: item.Category ? {
-                        id: item.Category.id,
-                        name: item.Category.name
+                    category: item.category ? {
+                        id: item.category.id,
+                        name: item.category.name
                     } : null,
-                    brand: item.Brand ? {
-                        id: item.Brand.id,
-                        name: item.Brand.name
+                    brand: item.brand ? {
+                        id: item.brand.id,
+                        name: item.brand.name
                     } : null
                 };
             }
