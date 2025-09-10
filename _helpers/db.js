@@ -23,7 +23,8 @@ const config = {
 const mysql = require('mysql2/promise');
 const { Sequelize, DataTypes } = require('sequelize');
 
-module.exports = db = {};
+const db = {};
+module.exports = db;
 
 initialize();
 

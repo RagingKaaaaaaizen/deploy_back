@@ -919,14 +919,42 @@ exports.approve = async (req, res, next) => {
         if (approvalRequest.type === 'stock') {
             console.log('Step 4: Processing STOCK approval...');
             
-            const requestData = approvalRequest.requestData;
+            // Handle requestData - might be stored as string in database
+            let requestData = approvalRequest.requestData;
+            
+            // If requestData is a string, parse it as JSON
+            if (typeof requestData === 'string') {
+                try {
+                    requestData = JSON.parse(requestData);
+                    console.log('✅ Successfully parsed requestData from string to object');
+                } catch (parseError) {
+                    console.error('❌ Failed to parse requestData JSON:', parseError);
+                    await transaction.rollback();
+                    return res.status(400).json({ 
+                        message: 'Invalid requestData format - unable to parse JSON',
+                        error: parseError.message,
+                        rawData: approvalRequest.requestData
+                    });
+                }
+            }
             
             // Validate all required fields with proper null/undefined checks
-            console.log('Validating required fields...');
-            console.log('itemId:', requestData?.itemId, 'type:', typeof requestData?.itemId);
-            console.log('locationId:', requestData?.locationId, 'type:', typeof requestData?.locationId);
-            console.log('quantity:', requestData?.quantity, 'type:', typeof requestData?.quantity);
-            console.log('price:', requestData?.price, 'type:', typeof requestData?.price);
+            console.log('=== DETAILED VALIDATION DEBUG ===');
+            console.log('Full approvalRequest object:', JSON.stringify(approvalRequest, null, 2));
+            console.log('requestData object:', JSON.stringify(requestData, null, 2));
+            console.log('requestData type:', typeof requestData);
+            console.log('requestData is null?', requestData === null);
+            console.log('requestData is undefined?', requestData === undefined);
+            
+            if (requestData) {
+                console.log('Individual field checks:');
+                console.log('  itemId:', requestData?.itemId, '| type:', typeof requestData?.itemId, '| null?:', requestData?.itemId == null, '| empty?:', requestData?.itemId === '');
+                console.log('  locationId:', requestData?.locationId, '| type:', typeof requestData?.locationId, '| null?:', requestData?.locationId == null, '| empty?:', requestData?.locationId === '');
+                console.log('  quantity:', requestData?.quantity, '| type:', typeof requestData?.quantity, '| null?:', requestData?.quantity == null, '| empty?:', requestData?.quantity === '');
+                console.log('  price:', requestData?.price, '| type:', typeof requestData?.price, '| null?:', requestData?.price == null, '| empty?:', requestData?.price === '');
+            } else {
+                console.error('❌ requestData is null or undefined!');
+            }
             
             const missing = [];
             
