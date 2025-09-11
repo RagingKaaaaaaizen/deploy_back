@@ -499,8 +499,16 @@ async function generateReport(request) {
                     }
                 },
                 include: [
-                    { model: db.Item, as: 'item', attributes: ['id', 'name'] },
-                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name'] }
+                    { 
+                        model: db.Item, 
+                        as: 'item', 
+                        attributes: ['id', 'name', 'description', 'model', 'serialNumber'],
+                        include: [
+                            { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                            { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                        ]
+                    },
+                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
                 ],
                 order: [['createdAt', 'DESC']]
             });
@@ -508,14 +516,22 @@ async function generateReport(request) {
             reportData.stocks = stocks.map(stock => ({
                 id: stock.id,
                 itemName: stock.item?.name || 'Unknown Item',
+                itemDescription: stock.item?.description || '',
+                itemModel: stock.item?.model || '',
+                itemSerialNumber: stock.item?.serialNumber || '',
+                categoryName: stock.item?.category?.name || 'Unknown Category',
+                brandName: stock.item?.brand?.name || 'Unknown Brand',
                 quantity: stock.quantity,
                 locationName: stock.location?.name || 'Unknown Location',
+                locationDescription: stock.location?.description || '',
                 totalPrice: stock.totalPrice,
+                unitPrice: stock.unitPrice,
                 createdAt: stock.createdAt
             }));
 
             reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
-            reportData.summary.totalValue += stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+            reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+            reportData.summary.totalValue += reportData.summary.stockValue;
         }
 
         // Get disposals data
@@ -527,7 +543,16 @@ async function generateReport(request) {
                     }
                 },
                 include: [
-                    { model: db.Item, as: 'item', attributes: ['id', 'name'] }
+                    { 
+                        model: db.Item, 
+                        as: 'item', 
+                        attributes: ['id', 'name', 'description', 'model', 'serialNumber'],
+                        include: [
+                            { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                            { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                        ]
+                    },
+                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
                 ],
                 order: [['disposalDate', 'DESC']]
             });
@@ -535,13 +560,24 @@ async function generateReport(request) {
             reportData.disposals = disposals.map(disposal => ({
                 id: disposal.id,
                 itemName: disposal.item?.name || 'Unknown Item',
+                itemDescription: disposal.item?.description || '',
+                itemModel: disposal.item?.model || '',
+                itemSerialNumber: disposal.item?.serialNumber || '',
+                categoryName: disposal.item?.category?.name || 'Unknown Category',
+                brandName: disposal.item?.brand?.name || 'Unknown Brand',
                 quantity: disposal.quantity,
                 reason: disposal.reason,
                 disposalDate: disposal.disposalDate,
-                totalValue: disposal.totalValue
+                totalValue: disposal.totalValue,
+                unitValue: disposal.unitValue,
+                locationName: disposal.location?.name || 'Unknown Location',
+                locationDescription: disposal.location?.description || '',
+                createdAt: disposal.createdAt
             }));
 
             reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
+            reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
+            reportData.summary.totalValue += reportData.summary.disposalValue;
         }
 
         // Get PCs data
@@ -553,8 +589,15 @@ async function generateReport(request) {
                     }
                 },
                 include: [
-                    { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name'] },
-                    { model: db.PCComponent, as: 'components', attributes: ['id'] }
+                    { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
+                    { 
+                        model: db.PCComponent, 
+                        as: 'components', 
+                        attributes: ['id', 'name', 'status'],
+                        include: [
+                            { model: db.Item, as: 'item', attributes: ['id', 'name', 'model'] }
+                        ]
+                    }
                 ],
                 order: [['createdAt', 'DESC']]
             });
@@ -562,14 +605,43 @@ async function generateReport(request) {
             reportData.pcs = pcs.map(pc => ({
                 id: pc.id,
                 name: pc.name,
+                description: pc.description || '',
                 roomLocationName: pc.roomLocation?.name || 'Unknown Location',
+                roomLocationDescription: pc.roomLocation?.description || '',
                 status: pc.status,
                 componentsCount: pc.components?.length || 0,
-                createdAt: pc.createdAt
+                components: pc.components?.map(comp => ({
+                    id: comp.id,
+                    name: comp.name,
+                    status: comp.status,
+                    itemName: comp.item?.name || 'Unknown Item',
+                    itemModel: comp.item?.model || ''
+                })) || [],
+                createdAt: pc.createdAt,
+                updatedAt: pc.updatedAt
             }));
 
             reportData.summary.totalPCs = pcs.length;
+            reportData.summary.pcValue = 0; // PCs don't have monetary value in this context
         }
+
+        // Calculate additional summary statistics
+        reportData.summary.averageStockValue = reportData.summary.stockValue / Math.max(reportData.summary.totalStocks, 1);
+        reportData.summary.averageDisposalValue = reportData.summary.disposalValue / Math.max(reportData.summary.totalDisposals, 1);
+        
+        // Add metadata
+        reportData.metadata = {
+            generatedBy: 'System',
+            generationTime: new Date(),
+            dataSource: 'Database',
+            filters: {
+                startDate,
+                endDate,
+                includeStocks,
+                includeDisposals,
+                includePCs
+            }
+        };
 
         return reportData;
     } catch (error) {
