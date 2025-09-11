@@ -32,4 +32,7 @@ router.get('/monthly-disposals', authorize([Role.Admin, Role.SuperAdmin]), analy
 // Report generation - available to all authenticated users
 router.post('/generate-report', analyticsController.generateReport);
 
+// Test database connectivity - available to all authenticated users
+router.get('/test-database', analyticsController.testDatabase);
+
 module.exports = router;

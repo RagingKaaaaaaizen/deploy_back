@@ -105,6 +105,36 @@ exports.generateReport = (req, res, next) => {
         })
         .catch(error => {
             console.error('Error generating report:', error);
+            console.error('Error stack:', error.stack);
             next(error);
+        });
+};
+
+// GET test database connectivity
+exports.testDatabase = (req, res, next) => {
+    console.log('=== TESTING DATABASE CONNECTIVITY ===');
+    
+    const db = require('../_helpers/db');
+    console.log('Available models:', Object.keys(db));
+    
+    // Test basic database query
+    db.Stock.findAll({ limit: 1 })
+        .then(result => {
+            console.log('Database test successful:', result.length, 'stocks found');
+            res.json({ 
+                success: true, 
+                message: 'Database connectivity test successful',
+                availableModels: Object.keys(db),
+                sampleData: result.length
+            });
+        })
+        .catch(error => {
+            console.error('Database test failed:', error);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Database connectivity test failed',
+                error: error.message,
+                stack: error.stack
+            });
         });
 };
