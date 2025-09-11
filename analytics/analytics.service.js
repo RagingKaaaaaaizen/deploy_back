@@ -502,7 +502,7 @@ async function generateReport(request) {
                     { 
                         model: db.Item, 
                         as: 'item', 
-                        attributes: ['id', 'name', 'description', 'model', 'serialNumber'],
+                        attributes: ['id', 'name', 'description'],
                         include: [
                             { model: db.Category, as: 'category', attributes: ['id', 'name'] },
                             { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
@@ -517,15 +517,13 @@ async function generateReport(request) {
                 id: stock.id,
                 itemName: stock.item?.name || 'Unknown Item',
                 itemDescription: stock.item?.description || '',
-                itemModel: stock.item?.model || '',
-                itemSerialNumber: stock.item?.serialNumber || '',
                 categoryName: stock.item?.category?.name || 'Unknown Category',
                 brandName: stock.item?.brand?.name || 'Unknown Brand',
                 quantity: stock.quantity,
                 locationName: stock.location?.name || 'Unknown Location',
                 locationDescription: stock.location?.description || '',
                 totalPrice: stock.totalPrice,
-                unitPrice: stock.unitPrice,
+                price: stock.price,
                 createdAt: stock.createdAt
             }));
 
@@ -546,7 +544,7 @@ async function generateReport(request) {
                     { 
                         model: db.Item, 
                         as: 'item', 
-                        attributes: ['id', 'name', 'description', 'model', 'serialNumber'],
+                        attributes: ['id', 'name', 'description'],
                         include: [
                             { model: db.Category, as: 'category', attributes: ['id', 'name'] },
                             { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
@@ -561,15 +559,12 @@ async function generateReport(request) {
                 id: disposal.id,
                 itemName: disposal.item?.name || 'Unknown Item',
                 itemDescription: disposal.item?.description || '',
-                itemModel: disposal.item?.model || '',
-                itemSerialNumber: disposal.item?.serialNumber || '',
                 categoryName: disposal.item?.category?.name || 'Unknown Category',
                 brandName: disposal.item?.brand?.name || 'Unknown Brand',
                 quantity: disposal.quantity,
                 reason: disposal.reason,
                 disposalDate: disposal.disposalDate,
                 totalValue: disposal.totalValue,
-                unitValue: disposal.unitValue,
                 locationName: disposal.location?.name || 'Unknown Location',
                 locationDescription: disposal.location?.description || '',
                 createdAt: disposal.createdAt
@@ -593,9 +588,9 @@ async function generateReport(request) {
                     { 
                         model: db.PCComponent, 
                         as: 'components', 
-                        attributes: ['id', 'name', 'status'],
+                        attributes: ['id', 'quantity', 'status', 'price', 'totalPrice'],
                         include: [
-                            { model: db.Item, as: 'item', attributes: ['id', 'name', 'model'] }
+                            { model: db.Item, as: 'item', attributes: ['id', 'name'] }
                         ]
                     }
                 ],
@@ -605,17 +600,18 @@ async function generateReport(request) {
             reportData.pcs = pcs.map(pc => ({
                 id: pc.id,
                 name: pc.name,
-                description: pc.description || '',
+                notes: pc.notes || '',
                 roomLocationName: pc.roomLocation?.name || 'Unknown Location',
                 roomLocationDescription: pc.roomLocation?.description || '',
                 status: pc.status,
                 componentsCount: pc.components?.length || 0,
                 components: pc.components?.map(comp => ({
                     id: comp.id,
-                    name: comp.name,
+                    quantity: comp.quantity,
                     status: comp.status,
                     itemName: comp.item?.name || 'Unknown Item',
-                    itemModel: comp.item?.model || ''
+                    price: comp.price,
+                    totalPrice: comp.totalPrice
                 })) || [],
                 createdAt: pc.createdAt,
                 updatedAt: pc.updatedAt
