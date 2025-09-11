@@ -101,9 +101,26 @@ exports.addBulkStock = async (req, res, next) => {
             return res.status(401).send({ message: 'User authentication required' });
         }
 
-        const { stockEntries } = req.body;
+        let { stockEntries } = req.body;
+        
+        // Parse stockEntries if it's a JSON string (from FormData)
+        if (typeof stockEntries === 'string') {
+            try {
+                stockEntries = JSON.parse(stockEntries);
+            } catch (error) {
+                console.error('Error parsing stockEntries JSON:', error);
+                return res.status(400).send({ message: 'Invalid stockEntries JSON format' });
+            }
+        }
+        
+        console.log('=== BULK STOCK DEBUG ===');
+        console.log('Parsed stockEntries:', JSON.stringify(stockEntries, null, 2));
+        console.log('StockEntries type:', typeof stockEntries);
+        console.log('StockEntries is array:', Array.isArray(stockEntries));
+        console.log('StockEntries length:', stockEntries?.length);
         
         if (!stockEntries || !Array.isArray(stockEntries) || stockEntries.length === 0) {
+            console.log('Validation failed: stockEntries is invalid');
             return res.status(400).send({ message: 'Stock entries array is required' });
         }
 
