@@ -221,3 +221,54 @@ exports.listReceipts = (req, res, next) => {
         });
     }
 };
+
+// GET check for orphaned receipt references
+exports.checkOrphanedReceipts = async (req, res, next) => {
+    try {
+        const receiptsDir = path.join(__dirname, '../uploads/receipts');
+        const existingFiles = fs.existsSync(receiptsDir) ? fs.readdirSync(receiptsDir) : [];
+        
+        // Get all stocks with receipt attachments
+        const stocksWithReceipts = await db.Stock.findAll({
+            where: {
+                receiptAttachment: {
+                    [db.Sequelize.Op.ne]: null
+                }
+            },
+            attributes: ['id', 'receiptAttachment']
+        });
+        
+        const orphanedReceipts = [];
+        const validReceipts = [];
+        
+        stocksWithReceipts.forEach(stock => {
+            if (existingFiles.includes(stock.receiptAttachment)) {
+                validReceipts.push(stock);
+            } else {
+                orphanedReceipts.push(stock);
+            }
+        });
+        
+        console.log('=== ORPHANED RECEIPTS CHECK ===');
+        console.log('Total stocks with receipts:', stocksWithReceipts.length);
+        console.log('Valid receipts:', validReceipts.length);
+        console.log('Orphaned receipts:', orphanedReceipts.length);
+        
+        res.json({
+            success: true,
+            totalStocksWithReceipts: stocksWithReceipts.length,
+            validReceipts: validReceipts.length,
+            orphanedReceipts: orphanedReceipts.length,
+            orphanedList: orphanedReceipts.map(s => ({
+                id: s.id,
+                receiptAttachment: s.receiptAttachment
+            }))
+        });
+    } catch (error) {
+        console.error('Error checking orphaned receipts:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
