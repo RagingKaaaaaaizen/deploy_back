@@ -37,6 +37,7 @@ router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]
 router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getById);                                // GET single stock log
 router.get('/available/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getAvailableStock);        // GET available stock for item
 router.get('/receipt/:filename', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getReceipt);               // GET receipt file
+router.get('/receipts/list', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.listReceipts);                 // GET list of receipt files
 router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), upload.single('receipt'), addStockSchema, controller.addStock);      // CREATE stock with file upload
 router.post('/bulk', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), upload.single('receipt'), controller.addBulkStock);  // CREATE multiple stock entries
 router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateStockSchema, controller.updateStock); // UPDATE stock

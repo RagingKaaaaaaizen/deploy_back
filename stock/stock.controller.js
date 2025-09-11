@@ -166,11 +166,41 @@ exports.getReceipt = (req, res, next) => {
     const filename = req.params.filename;
     const filePath = path.join(__dirname, '../uploads/receipts', filename);
     
+    console.log('=== RECEIPT FILE REQUEST ===');
+    console.log('Requested filename:', filename);
+    console.log('File path:', filePath);
+    console.log('File exists:', fs.existsSync(filePath));
+    
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+        console.log('File not found, returning 404');
         return res.status(404).send({ message: 'Receipt file not found' });
     }
     
+    console.log('File found, sending file');
     // Send file
     res.sendFile(filePath);
+};
+
+// GET list of receipt files (for debugging)
+exports.listReceipts = (req, res, next) => {
+    const receiptsDir = path.join(__dirname, '../uploads/receipts');
+    
+    try {
+        const files = fs.readdirSync(receiptsDir);
+        console.log('=== RECEIPT FILES LIST ===');
+        console.log('Files in receipts directory:', files);
+        
+        res.json({
+            success: true,
+            files: files,
+            count: files.length
+        });
+    } catch (error) {
+        console.error('Error reading receipts directory:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 };
