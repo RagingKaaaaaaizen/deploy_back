@@ -93,6 +93,61 @@ exports.getAvailableStock = (req, res, next) => {
         .catch(next);
 };
 
+// CREATE multiple stock entries (bulk)
+exports.addBulkStock = async (req, res, next) => {
+    try {
+        // Ensure user is authenticated
+        if (!req.user || !req.user.id) {
+            return res.status(401).send({ message: 'User authentication required' });
+        }
+
+        const { stockEntries, receiptAttachment } = req.body;
+        
+        if (!stockEntries || !Array.isArray(stockEntries) || stockEntries.length === 0) {
+            return res.status(400).send({ message: 'Stock entries array is required' });
+        }
+
+        // Check user role - Staff needs approval, Admin/SuperAdmin can bypass
+        if (req.user.role === 'Staff') {
+            // Create single approval request for all items
+            const approvalRequestData = {
+                type: 'stock',
+                requestData: {
+                    stockEntries: stockEntries,
+                    receiptAttachment: receiptAttachment
+                },
+                createdBy: req.user.id
+            };
+
+            console.log('=== BULK STOCK CONTROLLER DEBUG ===');
+            console.log('Creating bulk approval request for', stockEntries.length, 'items');
+            console.log('Approval request data:', JSON.stringify(approvalRequestData, null, 2));
+
+            const approvalRequest = await approvalRequestService.create(approvalRequestData);
+            
+            return res.status(201).send({
+                message: `${stockEntries.length} stock item(s) submitted for approval`,
+                approvalRequestId: approvalRequest.id,
+                status: 'pending_approval'
+            });
+        } else {
+            // Admin and SuperAdmin can create stock directly
+            const results = [];
+            for (const entry of stockEntries) {
+                const stock = await stockService.create(entry, req.user.id);
+                results.push(stock);
+            }
+            
+            res.send({
+                message: `${stockEntries.length} stock item(s) added successfully`,
+                stocks: results
+            });
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
 // DELETE stock by ID
 exports.delete = (req, res, next) => {
     stockService.delete(req.params.id)

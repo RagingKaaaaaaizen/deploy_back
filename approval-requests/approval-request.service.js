@@ -80,56 +80,121 @@ async function getById(id) {
         console.log('approvalRequest.type:', approvalRequest.type);
         console.log('enhancedRequestData.itemId:', enhancedRequestData.itemId);
         
-        if (approvalRequest.type === 'stock' && enhancedRequestData.itemId) {
-            console.log('✅ Processing stock enhancement for itemId:', enhancedRequestData.itemId);
-            
-            // Get item details
-            const item = await db.Item.findByPk(enhancedRequestData.itemId, {
-                include: [
-                    { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                    { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                ]
-            });
-            
-            console.log('Found item:', item ? item.name : 'NOT FOUND');
-
-            if (item) {
-                enhancedRequestData.itemDetails = {
-                    id: item.id,
-                    name: item.name,
-                    description: item.description,
-                    model: item.model,
-                    serialNumber: item.serialNumber,
-                    category: item.category ? {
-                        id: item.category.id,
-                        name: item.category.name
-                    } : null,
-                    brand: item.brand ? {
-                        id: item.brand.id,
-                        name: item.brand.name
-                    } : null
-                };
-            }
-
-            // Get storage location details
-            if (enhancedRequestData.locationId) {
-                console.log('✅ Processing location enhancement for locationId:', enhancedRequestData.locationId);
-                const location = await db.StorageLocation.findByPk(enhancedRequestData.locationId);
-                console.log('Found location:', location ? location.name : 'NOT FOUND');
+        if (approvalRequest.type === 'stock') {
+            // Check if this is a bulk request (multiple items) or single item
+            if (enhancedRequestData.stockEntries && Array.isArray(enhancedRequestData.stockEntries)) {
+                console.log('✅ Processing BULK stock enhancement for', enhancedRequestData.stockEntries.length, 'items');
                 
-                if (location) {
-                    enhancedRequestData.locationDetails = {
-                        id: location.id,
-                        name: location.name,
-                        description: location.description
-                    };
-                    console.log('✅ Added location details:', enhancedRequestData.locationDetails);
+                // Process each stock entry in the bulk request
+                enhancedRequestData.enhancedStockEntries = [];
+                let totalValue = 0;
+                
+                for (const stockEntry of enhancedRequestData.stockEntries) {
+                    const enhancedEntry = { ...stockEntry };
+                    
+                    // Get item details
+                    if (stockEntry.itemId) {
+                        const item = await db.Item.findByPk(stockEntry.itemId, {
+                            include: [
+                                { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                                { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                            ]
+                        });
+                        
+                        if (item) {
+                            enhancedEntry.itemDetails = {
+                                id: item.id,
+                                name: item.name,
+                                description: item.description,
+                                model: item.model,
+                                serialNumber: item.serialNumber,
+                                category: item.category ? {
+                                    id: item.category.id,
+                                    name: item.category.name
+                                } : null,
+                                brand: item.brand ? {
+                                    id: item.brand.id,
+                                    name: item.brand.name
+                                } : null
+                            };
+                        }
+                    }
+                    
+                    // Get storage location details
+                    if (stockEntry.locationId) {
+                        const location = await db.StorageLocation.findByPk(stockEntry.locationId);
+                        if (location) {
+                            enhancedEntry.locationDetails = {
+                                id: location.id,
+                                name: location.name,
+                                description: location.description
+                            };
+                        }
+                    }
+                    
+                    // Calculate entry total value
+                    if (stockEntry.quantity && stockEntry.price) {
+                        enhancedEntry.totalValue = stockEntry.quantity * stockEntry.price;
+                        totalValue += enhancedEntry.totalValue;
+                    }
+                    
+                    enhancedRequestData.enhancedStockEntries.push(enhancedEntry);
                 }
-            }
+                
+                enhancedRequestData.totalValue = totalValue;
+                console.log('✅ Bulk enhancement complete. Total value:', totalValue);
+                
+            } else if (enhancedRequestData.itemId) {
+                console.log('✅ Processing SINGLE stock enhancement for itemId:', enhancedRequestData.itemId);
+                
+                // Get item details
+                const item = await db.Item.findByPk(enhancedRequestData.itemId, {
+                    include: [
+                        { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                        { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                    ]
+                });
+                
+                console.log('Found item:', item ? item.name : 'NOT FOUND');
 
-            // Calculate total value
-            if (enhancedRequestData.quantity && enhancedRequestData.price) {
-                enhancedRequestData.totalValue = enhancedRequestData.quantity * enhancedRequestData.price;
+                if (item) {
+                    enhancedRequestData.itemDetails = {
+                        id: item.id,
+                        name: item.name,
+                        description: item.description,
+                        model: item.model,
+                        serialNumber: item.serialNumber,
+                        category: item.category ? {
+                            id: item.category.id,
+                            name: item.category.name
+                        } : null,
+                        brand: item.brand ? {
+                            id: item.brand.id,
+                            name: item.brand.name
+                        } : null
+                    };
+                }
+
+                // Get storage location details
+                if (enhancedRequestData.locationId) {
+                    console.log('✅ Processing location enhancement for locationId:', enhancedRequestData.locationId);
+                    const location = await db.StorageLocation.findByPk(enhancedRequestData.locationId);
+                    console.log('Found location:', location ? location.name : 'NOT FOUND');
+                    
+                    if (location) {
+                        enhancedRequestData.locationDetails = {
+                            id: location.id,
+                            name: location.name,
+                            description: location.description
+                        };
+                        console.log('✅ Added location details:', enhancedRequestData.locationDetails);
+                    }
+                }
+
+                // Calculate total value
+                if (enhancedRequestData.quantity && enhancedRequestData.price) {
+                    enhancedRequestData.totalValue = enhancedRequestData.quantity * enhancedRequestData.price;
+                }
             }
         }
 
