@@ -475,8 +475,16 @@ async function generateReport(request) {
     try {
         const { startDate, endDate, includeStocks, includeDisposals, includePCs } = request;
         
+        console.log('=== REPORT GENERATION DEBUG ===');
+        console.log('Received startDate:', startDate);
+        console.log('Received endDate:', endDate);
+        
         const start = new Date(startDate);
         const end = new Date(endDate);
+        
+        console.log('Parsed start date:', start);
+        console.log('Parsed end date:', end);
+        console.log('Date range:', start.toISOString(), 'to', end.toISOString());
         
         const reportData = {
             stocks: [],
@@ -492,6 +500,12 @@ async function generateReport(request) {
 
         // Get stocks data
         if (includeStocks) {
+            console.log('Fetching stocks with date filter:', { start, end });
+            
+            // First, let's check if there are any stocks at all
+            const allStocks = await db.Stock.findAll({ limit: 5 });
+            console.log('Sample stocks in database:', allStocks.map(s => ({ id: s.id, createdAt: s.createdAt })));
+            
             const stocks = await db.Stock.findAll({
                 where: {
                     createdAt: {
@@ -534,6 +548,12 @@ async function generateReport(request) {
 
         // Get disposals data
         if (includeDisposals) {
+            console.log('Fetching disposals with date filter:', { start, end });
+            
+            // First, let's check if there are any disposals at all
+            const allDisposals = await db.Dispose.findAll({ limit: 5 });
+            console.log('Sample disposals in database:', allDisposals.map(d => ({ id: d.id, disposalDate: d.disposalDate, createdAt: d.createdAt })));
+            
             const disposals = await db.Dispose.findAll({
                 where: {
                     disposalDate: {
@@ -577,6 +597,12 @@ async function generateReport(request) {
 
         // Get PCs data
         if (includePCs) {
+            console.log('Fetching PCs with date filter:', { start, end });
+            
+            // First, let's check if there are any PCs at all
+            const allPCs = await db.PC.findAll({ limit: 5 });
+            console.log('Sample PCs in database:', allPCs.map(p => ({ id: p.id, createdAt: p.createdAt })));
+            
             const pcs = await db.PC.findAll({
                 where: {
                     createdAt: {
@@ -620,6 +646,12 @@ async function generateReport(request) {
             reportData.summary.totalPCs = pcs.length;
             reportData.summary.pcValue = 0; // PCs don't have monetary value in this context
         }
+
+        console.log('=== FINAL REPORT DATA ===');
+        console.log('Stocks found:', reportData.stocks.length);
+        console.log('Disposals found:', reportData.disposals.length);
+        console.log('PCs found:', reportData.pcs.length);
+        console.log('Summary:', reportData.summary);
 
         // Calculate additional summary statistics
         reportData.summary.averageStockValue = reportData.summary.stockValue / Math.max(reportData.summary.totalStocks, 1);
