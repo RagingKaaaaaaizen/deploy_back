@@ -938,127 +938,283 @@ exports.approve = async (req, res, next) => {
                 }
             }
             
-            // Validate all required fields with proper null/undefined checks
+            // Check if this is a bulk request or single item request
+            const isBulkRequest = requestData?.stockEntries && Array.isArray(requestData.stockEntries);
+            
             console.log('=== DETAILED VALIDATION DEBUG ===');
             console.log('Full approvalRequest object:', JSON.stringify(approvalRequest, null, 2));
             console.log('requestData object:', JSON.stringify(requestData, null, 2));
             console.log('requestData type:', typeof requestData);
+            console.log('Is bulk request?', isBulkRequest);
             console.log('requestData is null?', requestData === null);
             console.log('requestData is undefined?', requestData === undefined);
             
-            if (requestData) {
-                console.log('Individual field checks:');
-                console.log('  itemId:', requestData?.itemId, '| type:', typeof requestData?.itemId, '| null?:', requestData?.itemId == null, '| empty?:', requestData?.itemId === '');
-                console.log('  locationId:', requestData?.locationId, '| type:', typeof requestData?.locationId, '| null?:', requestData?.locationId == null, '| empty?:', requestData?.locationId === '');
-                console.log('  quantity:', requestData?.quantity, '| type:', typeof requestData?.quantity, '| null?:', requestData?.quantity == null, '| empty?:', requestData?.quantity === '');
-                console.log('  price:', requestData?.price, '| type:', typeof requestData?.price, '| null?:', requestData?.price == null, '| empty?:', requestData?.price === '');
+            if (isBulkRequest) {
+                console.log('Processing BULK request with', requestData.stockEntries.length, 'items');
+                
+                // Validate bulk request structure
+                if (!requestData.stockEntries || requestData.stockEntries.length === 0) {
+                    await transaction.rollback();
+                    console.error('❌ Bulk request has no stock entries');
+                    return res.status(400).json({ 
+                        message: 'Bulk request must contain at least one stock entry',
+                        receivedData: requestData
+                    });
+                }
+                
+                // Validate each stock entry
+                for (let i = 0; i < requestData.stockEntries.length; i++) {
+                    const entry = requestData.stockEntries[i];
+                    const missing = [];
+                    
+                    if (entry?.itemId == null || entry?.itemId === '') {
+                        missing.push(`stockEntries[${i}].itemId`);
+                    }
+                    if (entry?.locationId == null || entry?.locationId === '') {
+                        missing.push(`stockEntries[${i}].locationId`);
+                    }
+                    if (entry?.quantity == null || entry?.quantity === '') {
+                        missing.push(`stockEntries[${i}].quantity`);
+                    }
+                    if (entry?.price == null || entry?.price === '') {
+                        missing.push(`stockEntries[${i}].price`);
+                    }
+                    
+                    if (missing.length > 0) {
+                        await transaction.rollback();
+                        console.error(`❌ Missing required fields in stock entry ${i}:`, missing);
+                        return res.status(400).json({ 
+                            message: `Missing required fields in stock entry ${i}`, 
+                            missingFields: missing,
+                            entryIndex: i,
+                            entryData: entry
+                        });
+                    }
+                }
+                
+                console.log('✅ All bulk stock entries validated');
+                
             } else {
-                console.error('❌ requestData is null or undefined!');
+                console.log('Processing SINGLE item request');
+                
+                if (requestData) {
+                    console.log('Individual field checks:');
+                    console.log('  itemId:', requestData?.itemId, '| type:', typeof requestData?.itemId, '| null?:', requestData?.itemId == null, '| empty?:', requestData?.itemId === '');
+                    console.log('  locationId:', requestData?.locationId, '| type:', typeof requestData?.locationId, '| null?:', requestData?.locationId == null, '| empty?:', requestData?.locationId === '');
+                    console.log('  quantity:', requestData?.quantity, '| type:', typeof requestData?.quantity, '| null?:', requestData?.quantity == null, '| empty?:', requestData?.quantity === '');
+                    console.log('  price:', requestData?.price, '| type:', typeof requestData?.price, '| null?:', requestData?.price == null, '| empty?:', requestData?.price === '');
+                } else {
+                    console.error('❌ requestData is null or undefined!');
+                }
+                
+                const missing = [];
+                
+                // Check for null, undefined, or empty string (but allow 0)
+                if (requestData?.itemId == null || requestData?.itemId === '') {
+                    missing.push('itemId');
+                }
+                if (requestData?.locationId == null || requestData?.locationId === '') {
+                    missing.push('locationId');
+                }
+                if (requestData?.quantity == null || requestData?.quantity === '') {
+                    missing.push('quantity');
+                }
+                if (requestData?.price == null || requestData?.price === '') {
+                    missing.push('price');
+                }
+                
+                if (missing.length > 0) {
+                    await transaction.rollback();
+                    console.error('❌ Missing required fields:', missing);
+                    console.error('Full requestData for debugging:', JSON.stringify(requestData, null, 2));
+                    return res.status(400).json({ 
+                        message: 'Missing required fields', 
+                        missingFields: missing,
+                        receivedData: requestData
+                    });
+                }
+                
+                console.log('✅ All required fields present for single item');
             }
-            
-            const missing = [];
-            
-            // Check for null, undefined, or empty string (but allow 0)
-            if (requestData?.itemId == null || requestData?.itemId === '') {
-                missing.push('itemId');
-            }
-            if (requestData?.locationId == null || requestData?.locationId === '') {
-                missing.push('locationId');
-            }
-            if (requestData?.quantity == null || requestData?.quantity === '') {
-                missing.push('quantity');
-            }
-            if (requestData?.price == null || requestData?.price === '') {
-                missing.push('price');
-            }
-            
-            if (missing.length > 0) {
-                await transaction.rollback();
-                console.error('❌ Missing required fields:', missing);
-                console.error('Full requestData for debugging:', JSON.stringify(requestData, null, 2));
-                return res.status(400).json({ 
-                    message: 'Missing required fields', 
-                    missingFields: missing,
-                    receivedData: requestData
-                });
-            }
-            
-            console.log('✅ All required fields present');
 
             // Validate foreign key references exist
             console.log('Step 5: Validating foreign key references...');
             
-            const [itemExists, locationExists, userExists] = await Promise.all([
-                db.Item.findByPk(parseInt(requestData.itemId), { transaction }),
-                db.StorageLocation.findByPk(parseInt(requestData.locationId), { transaction }),
-                db.Account.findByPk(approvalRequest.createdBy, { transaction })
-            ]);
+            if (isBulkRequest) {
+                // Validate foreign keys for bulk request
+                const uniqueItemIds = [...new Set(requestData.stockEntries.map(entry => parseInt(entry.itemId)))];
+                const uniqueLocationIds = [...new Set(requestData.stockEntries.map(entry => parseInt(entry.locationId)))];
+                
+                console.log('Unique item IDs to validate:', uniqueItemIds);
+                console.log('Unique location IDs to validate:', uniqueLocationIds);
+                
+                const [items, locations, userExists] = await Promise.all([
+                    db.Item.findAll({ where: { id: uniqueItemIds }, transaction }),
+                    db.StorageLocation.findAll({ where: { id: uniqueLocationIds }, transaction }),
+                    db.Account.findByPk(approvalRequest.createdBy, { transaction })
+                ]);
+                
+                // Check if all items exist
+                const foundItemIds = items.map(item => item.id);
+                const missingItemIds = uniqueItemIds.filter(id => !foundItemIds.includes(id));
+                if (missingItemIds.length > 0) {
+                    await transaction.rollback();
+                    console.error('❌ Items not found:', missingItemIds);
+                    return res.status(400).json({ message: `Items with IDs ${missingItemIds.join(', ')} not found` });
+                }
+                
+                // Check if all locations exist
+                const foundLocationIds = locations.map(location => location.id);
+                const missingLocationIds = uniqueLocationIds.filter(id => !foundLocationIds.includes(id));
+                if (missingLocationIds.length > 0) {
+                    await transaction.rollback();
+                    console.error('❌ Locations not found:', missingLocationIds);
+                    return res.status(400).json({ message: `Locations with IDs ${missingLocationIds.join(', ')} not found` });
+                }
+                
+                if (!userExists) {
+                    await transaction.rollback();
+                    console.error('❌ User not found:', approvalRequest.createdBy);
+                    return res.status(400).json({ message: `User with ID ${approvalRequest.createdBy} not found` });
+                }
+                
+                console.log('✅ All foreign key references valid for bulk request');
+                console.log('Items found:', items.map(item => `${item.id}: ${item.name}`));
+                console.log('Locations found:', locations.map(location => `${location.id}: ${location.name}`));
+                console.log('User:', userExists.firstName, userExists.lastName);
+                
+            } else {
+                // Validate foreign keys for single item request
+                const [itemExists, locationExists, userExists] = await Promise.all([
+                    db.Item.findByPk(parseInt(requestData.itemId), { transaction }),
+                    db.StorageLocation.findByPk(parseInt(requestData.locationId), { transaction }),
+                    db.Account.findByPk(approvalRequest.createdBy, { transaction })
+                ]);
 
-            if (!itemExists) {
-                await transaction.rollback();
-                console.error('❌ Item not found:', requestData.itemId);
-                return res.status(400).json({ message: `Item with ID ${requestData.itemId} not found` });
+                if (!itemExists) {
+                    await transaction.rollback();
+                    console.error('❌ Item not found:', requestData.itemId);
+                    return res.status(400).json({ message: `Item with ID ${requestData.itemId} not found` });
+                }
+
+                if (!locationExists) {
+                    await transaction.rollback();
+                    console.error('❌ Location not found:', requestData.locationId);
+                    return res.status(400).json({ message: `Location with ID ${requestData.locationId} not found` });
+                }
+
+                if (!userExists) {
+                    await transaction.rollback();
+                    console.error('❌ User not found:', approvalRequest.createdBy);
+                    return res.status(400).json({ message: `User with ID ${approvalRequest.createdBy} not found` });
+                }
+
+                console.log('✅ All foreign key references valid for single item');
+                console.log('Item:', itemExists.name);
+                console.log('Location:', locationExists.name);
+                console.log('User:', userExists.firstName, userExists.lastName);
             }
 
-            if (!locationExists) {
-                await transaction.rollback();
-                console.error('❌ Location not found:', requestData.locationId);
-                return res.status(400).json({ message: `Location with ID ${requestData.locationId} not found` });
-            }
-
-            if (!userExists) {
-                await transaction.rollback();
-                console.error('❌ User not found:', approvalRequest.createdBy);
-                return res.status(400).json({ message: `User with ID ${approvalRequest.createdBy} not found` });
-            }
-
-            console.log('✅ All foreign key references valid');
-            console.log('Item:', itemExists.name);
-            console.log('Location:', locationExists.name);
-            console.log('User:', userExists.firstName, userExists.lastName);
-
-            // Step 6: Create stock entry with proper type conversion
-            console.log('Step 6: Creating stock entry...');
+            // Step 6: Create stock entries with proper type conversion
+            console.log('Step 6: Creating stock entries...');
             
-            // Parse and validate numeric values
-            const itemId = parseInt(requestData.itemId);
-            const locationId = parseInt(requestData.locationId);
-            const quantity = parseInt(requestData.quantity);
-            const price = parseFloat(requestData.price);
+            let createdStocks = [];
             
-            // Validate parsed numbers
-            if (isNaN(itemId) || isNaN(locationId) || isNaN(quantity) || isNaN(price)) {
-                await transaction.rollback();
-                console.error('❌ Invalid numeric values in request data');
-                console.error('Parsed values:', { itemId, locationId, quantity, price });
-                return res.status(400).json({ 
-                    message: 'Invalid numeric values in request data',
-                    invalidValues: {
-                        itemId: isNaN(itemId) ? 'invalid' : itemId,
-                        locationId: isNaN(locationId) ? 'invalid' : locationId,
-                        quantity: isNaN(quantity) ? 'invalid' : quantity,
-                        price: isNaN(price) ? 'invalid' : price
+            if (isBulkRequest) {
+                console.log('Creating bulk stock entries for', requestData.stockEntries.length, 'items');
+                
+                for (let i = 0; i < requestData.stockEntries.length; i++) {
+                    const entry = requestData.stockEntries[i];
+                    
+                    // Parse and validate numeric values for each entry
+                    const itemId = parseInt(entry.itemId);
+                    const locationId = parseInt(entry.locationId);
+                    const quantity = parseInt(entry.quantity);
+                    const price = parseFloat(entry.price);
+                    
+                    // Validate parsed numbers
+                    if (isNaN(itemId) || isNaN(locationId) || isNaN(quantity) || isNaN(price)) {
+                        await transaction.rollback();
+                        console.error(`❌ Invalid numeric values in stock entry ${i}`);
+                        console.error('Parsed values:', { itemId, locationId, quantity, price });
+                        return res.status(400).json({ 
+                            message: `Invalid numeric values in stock entry ${i}`,
+                            entryIndex: i,
+                            invalidValues: {
+                                itemId: isNaN(itemId) ? 'invalid' : itemId,
+                                locationId: isNaN(locationId) ? 'invalid' : locationId,
+                                quantity: isNaN(quantity) ? 'invalid' : quantity,
+                                price: isNaN(price) ? 'invalid' : price
+                            }
+                        });
                     }
-                });
-            }
-            
-            const stockData = {
-                itemId: itemId,
-                locationId: locationId,
-                quantity: quantity,
-                price: price,
-                totalPrice: quantity * price,
-                remarks: requestData.remarks || '',
-                receiptAttachment: requestData.receiptAttachment || null,
-                disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
-                createdBy: approvalRequest.createdBy,
-                createdAt: new Date()
-            };
+                    
+                    const stockData = {
+                        itemId: itemId,
+                        locationId: locationId,
+                        quantity: quantity,
+                        price: price,
+                        totalPrice: quantity * price,
+                        remarks: entry.remarks || '',
+                        receiptAttachment: requestData.receiptAttachment || null,
+                        disposeId: entry.disposeId ? parseInt(entry.disposeId) : null,
+                        createdBy: approvalRequest.createdBy,
+                        createdAt: new Date()
+                    };
 
-            console.log('Creating stock with validated data:', JSON.stringify(stockData, null, 2));
-            
-            const newStock = await db.Stock.create(stockData, { transaction });
-            console.log('✅ Stock created successfully with ID:', newStock.id);
+                    console.log(`Creating stock entry ${i + 1} with data:`, JSON.stringify(stockData, null, 2));
+                    
+                    const newStock = await db.Stock.create(stockData, { transaction });
+                    createdStocks.push(newStock);
+                    console.log(`✅ Stock entry ${i + 1} created successfully with ID:`, newStock.id);
+                }
+                
+                console.log(`✅ All ${createdStocks.length} stock entries created successfully`);
+                
+            } else {
+                console.log('Creating single stock entry');
+                
+                // Parse and validate numeric values
+                const itemId = parseInt(requestData.itemId);
+                const locationId = parseInt(requestData.locationId);
+                const quantity = parseInt(requestData.quantity);
+                const price = parseFloat(requestData.price);
+                
+                // Validate parsed numbers
+                if (isNaN(itemId) || isNaN(locationId) || isNaN(quantity) || isNaN(price)) {
+                    await transaction.rollback();
+                    console.error('❌ Invalid numeric values in request data');
+                    console.error('Parsed values:', { itemId, locationId, quantity, price });
+                    return res.status(400).json({ 
+                        message: 'Invalid numeric values in request data',
+                        invalidValues: {
+                            itemId: isNaN(itemId) ? 'invalid' : itemId,
+                            locationId: isNaN(locationId) ? 'invalid' : locationId,
+                            quantity: isNaN(quantity) ? 'invalid' : quantity,
+                            price: isNaN(price) ? 'invalid' : price
+                        }
+                    });
+                }
+                
+                const stockData = {
+                    itemId: itemId,
+                    locationId: locationId,
+                    quantity: quantity,
+                    price: price,
+                    totalPrice: quantity * price,
+                    remarks: requestData.remarks || '',
+                    receiptAttachment: requestData.receiptAttachment || null,
+                    disposeId: requestData.disposeId ? parseInt(requestData.disposeId) : null,
+                    createdBy: approvalRequest.createdBy,
+                    createdAt: new Date()
+                };
+
+                console.log('Creating stock with validated data:', JSON.stringify(stockData, null, 2));
+                
+                const newStock = await db.Stock.create(stockData, { transaction });
+                createdStocks.push(newStock);
+                console.log('✅ Stock created successfully with ID:', newStock.id);
+            }
 
             // Step 7: Update approval status
             console.log('Step 7: Updating approval status...');
@@ -1080,30 +1236,56 @@ exports.approve = async (req, res, next) => {
             console.log('✅ Transaction committed successfully');
 
             // Step 9: Return success response
-            const response = {
-                id: approvalRequest.id,
-                type: approvalRequest.type,
-                status: 'approved',
-                message: 'Stock entry created successfully',
-                stockId: newStock.id,
-                stockData: {
-                    id: newStock.id,
-                    itemId: newStock.itemId,
-                    itemName: itemExists.name,
-                    locationId: newStock.locationId,
-                    locationName: locationExists.name,
-                    quantity: newStock.quantity,
-                    price: newStock.price,
-                    totalPrice: newStock.totalPrice,
-                    remarks: newStock.remarks,
-                    createdBy: newStock.createdBy,
-                    createdByName: `${userExists.firstName} ${userExists.lastName}`,
-                    createdAt: newStock.createdAt
-                },
-                approvedBy: req.user.id,
-                approvedAt: new Date(),
-                remarks: remarks || null
-            };
+            let response;
+            
+            if (isBulkRequest) {
+                response = {
+                    id: approvalRequest.id,
+                    type: approvalRequest.type,
+                    status: 'approved',
+                    message: `${createdStocks.length} stock entries created successfully`,
+                    stockCount: createdStocks.length,
+                    stockIds: createdStocks.map(stock => stock.id),
+                    stocks: createdStocks.map(stock => ({
+                        id: stock.id,
+                        itemId: stock.itemId,
+                        locationId: stock.locationId,
+                        quantity: stock.quantity,
+                        price: stock.price,
+                        totalPrice: stock.totalPrice,
+                        remarks: stock.remarks,
+                        createdBy: stock.createdBy,
+                        createdAt: stock.createdAt
+                    })),
+                    approvedBy: req.user.id,
+                    approvedAt: new Date(),
+                    remarks: remarks || null
+                };
+            } else {
+                // Single item response
+                const newStock = createdStocks[0];
+                response = {
+                    id: approvalRequest.id,
+                    type: approvalRequest.type,
+                    status: 'approved',
+                    message: 'Stock entry created successfully',
+                    stockId: newStock.id,
+                    stockData: {
+                        id: newStock.id,
+                        itemId: newStock.itemId,
+                        locationId: newStock.locationId,
+                        quantity: newStock.quantity,
+                        price: newStock.price,
+                        totalPrice: newStock.totalPrice,
+                        remarks: newStock.remarks,
+                        createdBy: newStock.createdBy,
+                        createdAt: newStock.createdAt
+                    },
+                    approvedBy: req.user.id,
+                    approvedAt: new Date(),
+                    remarks: remarks || null
+                };
+            }
 
             console.log('✅ APPROVAL WORKFLOW COMPLETED SUCCESSFULLY');
             console.log('Response:', JSON.stringify(response, null, 2));
