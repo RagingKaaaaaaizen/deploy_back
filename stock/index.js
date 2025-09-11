@@ -39,6 +39,6 @@ router.get('/available/:itemId', authorize([Role.SuperAdmin, Role.Admin, Role.St
 router.get('/receipt/:filename', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), controller.getReceipt);               // GET receipt file
 router.post('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), upload.single('receipt'), addStockSchema, controller.addStock);      // CREATE stock with file upload
 router.put('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), updateStockSchema, controller.updateStock); // UPDATE stock
-router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff]), controller._delete);                   // DELETE stock
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), controller.delete);                   // DELETE stock
 
 module.exports = router;

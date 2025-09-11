@@ -93,6 +93,13 @@ exports.getAvailableStock = (req, res, next) => {
         .catch(next);
 };
 
+// DELETE stock by ID
+exports.delete = (req, res, next) => {
+    stockService.delete(req.params.id)
+        .then(() => res.json({ message: 'Stock deleted successfully' }))
+        .catch(next);
+};
+
 // GET receipt file
 exports.getReceipt = (req, res, next) => {
     const filename = req.params.filename;
