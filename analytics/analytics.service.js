@@ -506,7 +506,8 @@ async function generateReport(request) {
             const allStocks = await db.Stock.findAll({ limit: 5 });
             console.log('Sample stocks in database:', allStocks.map(s => ({ id: s.id, createdAt: s.createdAt })));
             
-            const stocks = await db.Stock.findAll({
+            // Create a more flexible date filter - if no data found in the specified range, try a broader range
+            let stocks = await db.Stock.findAll({
                 where: {
                     createdAt: {
                         [Op.between]: [start, end]
@@ -526,6 +527,35 @@ async function generateReport(request) {
                 ],
                 order: [['createdAt', 'DESC']]
             });
+
+            // If no stocks found in the specified range, try a broader range (last 6 months)
+            if (stocks.length === 0) {
+                console.log('No stocks found in specified range, trying broader range (last 6 months)');
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                
+                stocks = await db.Stock.findAll({
+                    where: {
+                        createdAt: {
+                            [Op.gte]: sixMonthsAgo
+                        }
+                    },
+                    include: [
+                        { 
+                            model: db.Item, 
+                            as: 'item', 
+                            attributes: ['id', 'name', 'description'],
+                            include: [
+                                { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                                { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                            ]
+                        },
+                        { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
+                    ],
+                    order: [['createdAt', 'DESC']]
+                });
+                console.log('Stocks found in broader range:', stocks.length);
+            }
 
             reportData.stocks = stocks.map(stock => ({
                 id: stock.id,
@@ -575,6 +605,35 @@ async function generateReport(request) {
                 order: [['disposalDate', 'DESC']]
             });
 
+            // If no disposals found in the specified range, try a broader range (last 6 months)
+            if (disposals.length === 0) {
+                console.log('No disposals found in specified range, trying broader range (last 6 months)');
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                
+                disposals = await db.Dispose.findAll({
+                    where: {
+                        disposalDate: {
+                            [Op.gte]: sixMonthsAgo
+                        }
+                    },
+                    include: [
+                        { 
+                            model: db.Item, 
+                            as: 'item', 
+                            attributes: ['id', 'name', 'description'],
+                            include: [
+                                { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                                { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                            ]
+                        },
+                        { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
+                    ],
+                    order: [['disposalDate', 'DESC']]
+                });
+                console.log('Disposals found in broader range:', disposals.length);
+            }
+
             reportData.disposals = disposals.map(disposal => ({
                 id: disposal.id,
                 itemName: disposal.item?.name || 'Unknown Item',
@@ -622,6 +681,34 @@ async function generateReport(request) {
                 ],
                 order: [['createdAt', 'DESC']]
             });
+
+            // If no PCs found in the specified range, try a broader range (last 6 months)
+            if (pcs.length === 0) {
+                console.log('No PCs found in specified range, trying broader range (last 6 months)');
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                
+                pcs = await db.PC.findAll({
+                    where: {
+                        createdAt: {
+                            [Op.gte]: sixMonthsAgo
+                        }
+                    },
+                    include: [
+                        { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
+                        { 
+                            model: db.PCComponent, 
+                            as: 'components', 
+                            attributes: ['id', 'quantity', 'status', 'price', 'totalPrice'],
+                            include: [
+                                { model: db.Item, as: 'item', attributes: ['id', 'name'] }
+                            ]
+                        }
+                    ],
+                    order: [['createdAt', 'DESC']]
+                });
+                console.log('PCs found in broader range:', pcs.length);
+            }
 
             reportData.pcs = pcs.map(pc => ({
                 id: pc.id,
