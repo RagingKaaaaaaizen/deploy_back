@@ -479,6 +479,10 @@ async function generateReport(request) {
         console.log('Received startDate:', startDate);
         console.log('Received endDate:', endDate);
         
+        // Test database connectivity
+        console.log('Testing database connectivity...');
+        console.log('Available models:', Object.keys(db));
+        
         const start = new Date(startDate);
         const end = new Date(endDate);
         
@@ -500,11 +504,12 @@ async function generateReport(request) {
 
         // Get stocks data
         if (includeStocks) {
-            console.log('Fetching stocks with date filter:', { start, end });
-            
-            // First, let's check if there are any stocks at all
-            const allStocks = await db.Stock.findAll({ limit: 5 });
-            console.log('Sample stocks in database:', allStocks.map(s => ({ id: s.id, createdAt: s.createdAt })));
+            try {
+                console.log('Fetching stocks with date filter:', { start, end });
+                
+                // First, let's check if there are any stocks at all
+                const allStocks = await db.Stock.findAll({ limit: 5 });
+                console.log('Sample stocks in database:', allStocks.map(s => ({ id: s.id, createdAt: s.createdAt })));
             
             // Create a more flexible date filter - if no data found in the specified range, try a broader range
             let stocks = await db.Stock.findAll({
@@ -571,18 +576,25 @@ async function generateReport(request) {
                 createdAt: stock.createdAt
             }));
 
-            reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
-            reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
-            reportData.summary.totalValue += reportData.summary.stockValue;
+                reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
+                reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+                reportData.summary.totalValue += reportData.summary.stockValue;
+            } catch (error) {
+                console.error('Error fetching stocks:', error);
+                reportData.stocks = [];
+                reportData.summary.totalStocks = 0;
+                reportData.summary.stockValue = 0;
+            }
         }
 
         // Get disposals data
         if (includeDisposals) {
-            console.log('Fetching disposals with date filter:', { start, end });
-            
-            // First, let's check if there are any disposals at all
-            const allDisposals = await db.Dispose.findAll({ limit: 5 });
-            console.log('Sample disposals in database:', allDisposals.map(d => ({ id: d.id, disposalDate: d.disposalDate, createdAt: d.createdAt })));
+            try {
+                console.log('Fetching disposals with date filter:', { start, end });
+                
+                // First, let's check if there are any disposals at all
+                const allDisposals = await db.Dispose.findAll({ limit: 5 });
+                console.log('Sample disposals in database:', allDisposals.map(d => ({ id: d.id, disposalDate: d.disposalDate, createdAt: d.createdAt })));
             
             const disposals = await db.Dispose.findAll({
                 where: {
@@ -649,18 +661,25 @@ async function generateReport(request) {
                 createdAt: disposal.createdAt
             }));
 
-            reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
-            reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
-            reportData.summary.totalValue += reportData.summary.disposalValue;
+                reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
+                reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
+                reportData.summary.totalValue += reportData.summary.disposalValue;
+            } catch (error) {
+                console.error('Error fetching disposals:', error);
+                reportData.disposals = [];
+                reportData.summary.totalDisposals = 0;
+                reportData.summary.disposalValue = 0;
+            }
         }
 
         // Get PCs data
         if (includePCs) {
-            console.log('Fetching PCs with date filter:', { start, end });
-            
-            // First, let's check if there are any PCs at all
-            const allPCs = await db.PC.findAll({ limit: 5 });
-            console.log('Sample PCs in database:', allPCs.map(p => ({ id: p.id, createdAt: p.createdAt })));
+            try {
+                console.log('Fetching PCs with date filter:', { start, end });
+                
+                // First, let's check if there are any PCs at all
+                const allPCs = await db.PC.findAll({ limit: 5 });
+                console.log('Sample PCs in database:', allPCs.map(p => ({ id: p.id, createdAt: p.createdAt })));
             
             const pcs = await db.PC.findAll({
                 where: {
@@ -730,8 +749,14 @@ async function generateReport(request) {
                 updatedAt: pc.updatedAt
             }));
 
-            reportData.summary.totalPCs = pcs.length;
-            reportData.summary.pcValue = 0; // PCs don't have monetary value in this context
+                reportData.summary.totalPCs = pcs.length;
+                reportData.summary.pcValue = 0; // PCs don't have monetary value in this context
+            } catch (error) {
+                console.error('Error fetching PCs:', error);
+                reportData.pcs = [];
+                reportData.summary.totalPCs = 0;
+                reportData.summary.pcValue = 0;
+            }
         }
 
         console.log('=== FINAL REPORT DATA ===');
