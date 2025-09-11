@@ -101,10 +101,16 @@ exports.addBulkStock = async (req, res, next) => {
             return res.status(401).send({ message: 'User authentication required' });
         }
 
-        const { stockEntries, receiptAttachment } = req.body;
+        const { stockEntries } = req.body;
         
         if (!stockEntries || !Array.isArray(stockEntries) || stockEntries.length === 0) {
             return res.status(400).send({ message: 'Stock entries array is required' });
+        }
+
+        // Handle file upload if present
+        let receiptAttachment = null;
+        if (req.file) {
+            receiptAttachment = req.file.filename;
         }
 
         // Check user role - Staff needs approval, Admin/SuperAdmin can bypass
