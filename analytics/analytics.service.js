@@ -573,6 +573,7 @@ async function generateReport(request) {
                 locationDescription: stock.location?.description || '',
                 totalPrice: stock.totalPrice,
                 price: stock.price,
+                receiptAttachment: stock.receiptAttachment,
                 createdAt: stock.createdAt
             }));
 
@@ -658,6 +659,7 @@ async function generateReport(request) {
                 totalValue: disposal.totalValue,
                 locationName: disposal.location?.name || 'Unknown Location',
                 locationDescription: disposal.location?.description || '',
+                receiptAttachment: disposal.receiptAttachment,
                 createdAt: disposal.createdAt
             }));
 
