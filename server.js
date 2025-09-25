@@ -51,15 +51,17 @@ async function startServer() {
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production'
         ? process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-d487.onrender.com'
-        : '*',
+        : 'http://localhost:4200', // Specific frontend URL for development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     optionsSuccessStatus: 204
 };
-app.use(cors({
-    origin: 'http://localhost:4200'
-}));
+app.use(cors(corsOptions));
+app.use((req, res, next) => {
+    console.log('Request Origin:', req.headers.origin);
+    next();
+});
 
 // API routes
 app.use('/api/accounts', require('./accounts/account.controller'));
