@@ -57,7 +57,9 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     optionsSuccessStatus: 204
 };
-app.use(cors(corsOptions));
+app.use(cors({
+    origin: 'http://localhost:4200'
+}));
 
 // API routes
 app.use('/api/accounts', require('./accounts/account.controller'));
