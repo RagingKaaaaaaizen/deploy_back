@@ -1,5 +1,6 @@
-const PCPartPickerAPIService = require('./pcpartpicker-api.service');
+const PCPartPickerJSONAPIService = require('./pcpartpicker-json-api.service');
 const MockAPIService = require('./mock-api.service');
+const NeweggAPIService = require('./newegg-api.service');
 const db = require('../../_helpers/db');
 
 /**
@@ -22,11 +23,11 @@ class APIManagerService {
         try {
             // Add providers in order of priority
             this.addProvider('mock', new MockAPIService(), 1); // Primary for testing
-            this.addProvider('pcpartpicker', new PCPartPickerAPIService(), 2);
+            this.addProvider('pcpartpicker-json', new PCPartPickerJSONAPIService(), 2); // JSON API (best)
+            this.addProvider('newegg', new NeweggAPIService(), 3); // Real API provider
             
             // Future providers can be added here
-            // this.addProvider('amazon', new AmazonAPIService(), 3);
-            // this.addProvider('newegg', new NeweggAPIService(), 4);
+            // this.addProvider('amazon', new AmazonAPIService(), 4);
             
             this.isInitialized = true;
             console.log('API Manager initialized with providers:', Array.from(this.providers.keys()));

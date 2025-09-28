@@ -1,38 +1,38 @@
 const BaseAPIService = require('./base-api.service');
 
 /**
- * PCPartPicker API service for fetching PC hardware specifications
- * This service scrapes PCPartPicker since they don't have an official API
+ * Newegg API service for fetching PC hardware specifications
+ * This service uses Newegg's product search API
  */
-class PCPartPickerAPIService extends BaseAPIService {
+class NeweggAPIService extends BaseAPIService {
     constructor() {
-        super('pcpartpicker', 'https://pcpartpicker.com', 2000); // 2 second delay between requests
+        super('newegg', 'https://www.newegg.com', 3000); // 3 second delay between requests
         
-        // PCPartPicker category mappings
+        // Newegg category mappings
         this.categoryMappings = {
-            'cpu': 'cpu',
-            'processor': 'cpu',
-            'graphics-card': 'gpu',
-            'gpu': 'gpu',
-            'memory': 'memory',
-            'ram': 'memory',
-            'storage': 'storage',
-            'hard-drive': 'storage',
-            'ssd': 'storage',
-            'motherboard': 'motherboard',
-            'case': 'case',
-            'power-supply': 'psu',
-            'psu': 'psu',
-            'monitor': 'monitor',
-            'keyboard': 'keyboard',
-            'mouse': 'mouse',
-            'headset': 'headset',
-            'speaker': 'speaker'
+            'cpu': 'processors-desktops',
+            'processor': 'processors-desktops',
+            'gpu': 'graphics-cards',
+            'graphics-card': 'graphics-cards',
+            'memory': 'memory-desktops',
+            'ram': 'memory-desktops',
+            'storage': 'internal-hard-drives',
+            'hard-drive': 'internal-hard-drives',
+            'ssd': 'internal-hard-drives',
+            'motherboard': 'motherboards',
+            'case': 'computer-cases',
+            'power-supply': 'power-supplies',
+            'psu': 'power-supplies',
+            'monitor': 'monitors',
+            'keyboard': 'keyboards',
+            'mouse': 'mice',
+            'headset': 'headsets',
+            'speaker': 'speakers'
         };
     }
 
     /**
-     * Search for parts on PCPartPicker
+     * Search for parts on Newegg
      * @param {string} query - Search query
      * @param {string} category - Part category
      * @param {number} limit - Result limit
@@ -40,7 +40,7 @@ class PCPartPickerAPIService extends BaseAPIService {
      */
     async searchParts(query, category = null, limit = 10) {
         try {
-            const cacheKey = `search_${query}_${category}_${limit}`;
+            const cacheKey = `newegg_search_${query}_${category}_${limit}`;
             
             // Check cache first
             const cached = await this.getCachedData(cacheKey);
@@ -51,26 +51,34 @@ class PCPartPickerAPIService extends BaseAPIService {
             // Build search URL
             const searchUrl = this.buildSearchUrl(query, category);
             
-            // Make request to PCPartPicker
-            const response = await this.makeRequest('GET', searchUrl);
+            // Make request to Newegg
+            const response = await this.makeRequest('GET', searchUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Referer': 'https://www.newegg.com/'
+                }
+            });
             
             // Parse the HTML response
             const parts = this.parseSearchResults(response, limit);
             
-            // Cache the results for 1 hour
-            await this.cacheData(cacheKey, parts, 1);
+            // Cache the results for 2 hours
+            await this.cacheData(cacheKey, parts, 2);
             
             return parts;
 
         } catch (error) {
-            console.error('PCPartPicker search error:', error);
-            throw new Error(`Failed to search PCPartPicker: ${error.message}`);
+            console.error('Newegg search error:', error);
+            console.log('Newegg unavailable, returning empty results');
+            return [];
         }
     }
 
     /**
      * Get detailed part information
-     * @param {string} partId - PCPartPicker part ID
+     * @param {string} partId - Newegg part ID
      * @returns {Promise<Object>} Part details
      */
     async getPartDetails(partId) {
@@ -81,7 +89,7 @@ class PCPartPickerAPIService extends BaseAPIService {
                 return cached;
             }
 
-            const detailUrl = `/product/${partId}`;
+            const detailUrl = `/p/${partId}`;
             const response = await this.makeRequest('GET', detailUrl);
             
             const partDetails = this.parsePartDetails(response);
@@ -92,13 +100,13 @@ class PCPartPickerAPIService extends BaseAPIService {
             return partDetails;
 
         } catch (error) {
-            console.error('PCPartPicker part details error:', error);
-            throw new Error(`Failed to get PCPartPicker part details: ${error.message}`);
+            console.error('Newegg part details error:', error);
+            throw new Error(`Failed to get Newegg part details: ${error.message}`);
         }
     }
 
     /**
-     * Extract specifications from PCPartPicker data
+     * Extract specifications from Newegg data
      * @param {Object} partData - Raw part data
      * @returns {Object} Extracted specifications
      */
@@ -109,9 +117,8 @@ class PCPartPickerAPIService extends BaseAPIService {
             return specs;
         }
 
-        // Common specification mappings
+        // Use the same specification mappings as PCPartPicker
         const specMappings = {
-            // CPU specifications
             'cores': ['cores', 'core count', 'cpu cores'],
             'threads': ['threads', 'thread count', 'cpu threads'],
             'base_clock': ['base clock', 'base frequency', 'cpu base clock'],
@@ -119,43 +126,12 @@ class PCPartPickerAPIService extends BaseAPIService {
             'tdp': ['tdp', 'thermal design power', 'power consumption'],
             'socket': ['socket', 'cpu socket', 'socket type'],
             'lithography': ['lithography', 'process node', 'manufacturing process'],
-            
-            // GPU specifications
             'memory': ['memory', 'vram', 'video memory'],
             'memory_type': ['memory type', 'vram type', 'memory interface'],
             'base_clock_gpu': ['base clock', 'gpu base clock', 'graphics base clock'],
             'boost_clock_gpu': ['boost clock', 'gpu boost clock', 'graphics boost clock'],
             'memory_bandwidth': ['memory bandwidth', 'memory bus'],
-            'cuda_cores': ['cuda cores', 'stream processors'],
-            
-            // Memory specifications
-            'capacity': ['capacity', 'size', 'memory size'],
-            'speed': ['speed', 'frequency', 'memory speed'],
-            'type': ['type', 'memory type', 'ddr type'],
-            'cas_latency': ['cas latency', 'cl', 'timing'],
-            'voltage': ['voltage', 'memory voltage'],
-            
-            // Storage specifications
-            'capacity_storage': ['capacity', 'size', 'storage capacity'],
-            'type_storage': ['type', 'storage type', 'interface'],
-            'read_speed': ['read speed', 'sequential read', 'read performance'],
-            'write_speed': ['write speed', 'sequential write', 'write performance'],
-            'form_factor': ['form factor', 'size', 'physical size'],
-            
-            // Monitor specifications
-            'screen_size': ['screen size', 'display size', 'size'],
-            'resolution': ['resolution', 'display resolution'],
-            'refresh_rate': ['refresh rate', 'frequency'],
-            'response_time': ['response time', 'gray to gray'],
-            'brightness': ['brightness', 'luminance', 'nits'],
-            'contrast_ratio': ['contrast ratio', 'contrast'],
-            'panel_type': ['panel type', 'display technology'],
-            
-            // Power Supply specifications
-            'wattage': ['wattage', 'power', 'watt'],
-            'efficiency': ['efficiency', 'certification', '80 plus'],
-            'modular': ['modular', 'modularity'],
-            'form_factor_psu': ['form factor', 'size', 'psu size']
+            'cuda_cores': ['cuda cores', 'stream processors']
         };
 
         // Extract specifications using mappings
@@ -180,13 +156,13 @@ class PCPartPickerAPIService extends BaseAPIService {
     }
 
     /**
-     * Build search URL for PCPartPicker
+     * Build search URL for Newegg
      * @param {string} query - Search query
      * @param {string} category - Part category
      * @returns {string} Search URL
      */
     buildSearchUrl(query, category) {
-        let url = '/search/';
+        let url = '/product/';
         
         if (category && this.categoryMappings[category.toLowerCase()]) {
             url += this.categoryMappings[category.toLowerCase()] + '/';
@@ -198,7 +174,7 @@ class PCPartPickerAPIService extends BaseAPIService {
     }
 
     /**
-     * Parse search results from PCPartPicker HTML
+     * Parse search results from Newegg HTML
      * @param {string} html - HTML response
      * @param {number} limit - Result limit
      * @returns {Array} Parsed parts
@@ -207,9 +183,8 @@ class PCPartPickerAPIService extends BaseAPIService {
         const parts = [];
         
         try {
-            // This is a simplified parser - in a real implementation,
-            // you would use a proper HTML parser like cheerio
-            const productRegex = /<div class="product-item"[^>]*>(.*?)<\/div>/gs;
+            // Newegg product item regex
+            const productRegex = /<div class="item-container"[^>]*>(.*?)<\/div>/gs;
             let match;
             let count = 0;
 
@@ -224,7 +199,7 @@ class PCPartPickerAPIService extends BaseAPIService {
             }
 
         } catch (error) {
-            console.error('Error parsing PCPartPicker search results:', error);
+            console.error('Error parsing Newegg search results:', error);
         }
 
         return parts;
@@ -238,9 +213,9 @@ class PCPartPickerAPIService extends BaseAPIService {
     parseProductItem(productHtml) {
         try {
             // Extract basic information using regex patterns
-            const idMatch = productHtml.match(/href="\/product\/([^"]+)"/);
+            const idMatch = productHtml.match(/href="\/p\/([^"]+)"/);
             const nameMatch = productHtml.match(/title="([^"]+)"/);
-            const priceMatch = productHtml.match(/class="price">([^<]+)</);
+            const priceMatch = productHtml.match(/class="price-current"[^>]*>([^<]+)</);
             const imageMatch = productHtml.match(/src="([^"]+)"/);
 
             if (!idMatch) return null;
@@ -250,7 +225,7 @@ class PCPartPickerAPIService extends BaseAPIService {
                 name: nameMatch ? nameMatch[1] : 'Unknown Product',
                 price: priceMatch ? this.parsePrice(priceMatch[1]) : null,
                 image: imageMatch ? imageMatch[1] : null,
-                url: `https://pcpartpicker.com/product/${idMatch[1]}`,
+                url: `https://www.newegg.com/p/${idMatch[1]}`,
                 specifications: {} // Will be filled by getPartDetails
             };
 
@@ -261,7 +236,7 @@ class PCPartPickerAPIService extends BaseAPIService {
     }
 
     /**
-     * Parse part details from PCPartPicker product page
+     * Parse part details from Newegg product page
      * @param {string} html - HTML response
      * @returns {Object} Parsed part details
      */
@@ -271,8 +246,8 @@ class PCPartPickerAPIService extends BaseAPIService {
         };
 
         try {
-            // Extract specifications table
-            const specTableRegex = /<table[^>]*class="specs"[^>]*>(.*?)<\/table>/s;
+            // Extract specifications from Newegg's spec table
+            const specTableRegex = /<table[^>]*class="table-horizontal"[^>]*>(.*?)<\/table>/s;
             const tableMatch = html.match(specTableRegex);
 
             if (tableMatch) {
@@ -290,8 +265,8 @@ class PCPartPickerAPIService extends BaseAPIService {
 
             // Extract basic product info
             const nameMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
-            const priceMatch = html.match(/<span[^>]*class="price"[^>]*>([^<]+)<\/span>/);
-            const imageMatch = html.match(/<img[^>]*src="([^"]+)"[^>]*class="product-image"/);
+            const priceMatch = html.match(/<span[^>]*class="price-current"[^>]*>([^<]+)<\/span>/);
+            const imageMatch = html.match(/<img[^>]*src="([^"]+)"[^>]*class="product-view-img-original"/);
 
             if (nameMatch) part.name = nameMatch[1].trim();
             if (priceMatch) part.price = this.parsePrice(priceMatch[1]);
@@ -339,13 +314,13 @@ class PCPartPickerAPIService extends BaseAPIService {
     }
 
     /**
-     * Map category to PCPartPicker category
+     * Map category to Newegg category
      * @param {string} category - General category
-     * @returns {string|null} PCPartPicker category
+     * @returns {string|null} Newegg category
      */
     mapCategory(category) {
         return this.categoryMappings[category?.toLowerCase()] || null;
     }
 }
 
-module.exports = PCPartPickerAPIService;
+module.exports = NeweggAPIService;

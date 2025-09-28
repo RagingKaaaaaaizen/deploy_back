@@ -31,6 +31,26 @@ class MockAPIService extends BaseAPIService {
                 }
             },
             {
+                id: 'mock-cpu-002',
+                name: 'AMD Ryzen 7 5800X',
+                brand: 'AMD',
+                model: '5800X',
+                category: 'cpu',
+                price: 299.99,
+                currency: 'USD',
+                image: 'https://example.com/cpu2.jpg',
+                url: 'https://example.com/product/cpu2',
+                specifications: {
+                    cores: { name: 'Cores', value: '8', unit: 'cores' },
+                    threads: { name: 'Threads', value: '16', unit: 'threads' },
+                    base_clock: { name: 'Base Clock', value: '3.8', unit: 'GHz' },
+                    boost_clock: { name: 'Max Boost Clock', value: '4.7', unit: 'GHz' },
+                    tdp: { name: 'TDP', value: '105', unit: 'W' },
+                    socket: { name: 'Socket', value: 'AM4', unit: null },
+                    lithography: { name: 'Lithography', value: '7', unit: 'nm' }
+                }
+            },
+            {
                 id: 'mock-gpu-001',
                 name: 'NVIDIA GeForce RTX 4070',
                 brand: 'NVIDIA',
