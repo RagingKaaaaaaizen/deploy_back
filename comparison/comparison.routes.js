@@ -2,8 +2,19 @@ const express = require('express');
 const router = express.Router();
 const comparisonController = require('./comparison.controller');
 const authorize = require('../_middleware/authorize');
-const validateRequest = require('../_middleware/validate-request');
-const { body, param, query } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
+
+// Express-validator middleware
+const handleValidationErrors = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation error',
+            errors: errors.array()
+        });
+    }
+    next();
+};
 
 // =============================================
 // ROUTE DEFINITIONS
@@ -21,7 +32,7 @@ router.post('/compare-parts',
         body('comparisonType').isIn(['inventory_vs_inventory', 'inventory_vs_pc', 'inventory_vs_online'])
             .withMessage('comparisonType must be one of: inventory_vs_inventory, inventory_vs_pc, inventory_vs_online')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.compareParts
 );
 
@@ -37,7 +48,7 @@ router.get('/history',
         query('comparisonType').optional().isIn(['inventory_vs_inventory', 'inventory_vs_pc', 'inventory_vs_online'])
             .withMessage('comparisonType must be one of: inventory_vs_inventory, inventory_vs_pc, inventory_vs_online')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.getComparisonHistory
 );
 
@@ -50,7 +61,7 @@ router.get('/specifications/:itemId',
     [
         param('itemId').isInt({ min: 1 }).withMessage('itemId must be a positive integer')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.getPartSpecifications
 );
 
@@ -67,7 +78,7 @@ router.post('/search-online',
             .withMessage('category must be less than 100 characters'),
         body('limit').optional().isInt({ min: 1, max: 50 }).withMessage('limit must be between 1 and 50')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.searchOnlineParts
 );
 
@@ -80,7 +91,7 @@ router.get('/suggestions/:itemId',
     [
         param('itemId').isInt({ min: 1 }).withMessage('itemId must be a positive integer')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.getComparisonSuggestions
 );
 
@@ -93,7 +104,7 @@ router.post('/update-specifications/:itemId',
     [
         param('itemId').isInt({ min: 1 }).withMessage('itemId must be a positive integer')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.updatePartSpecifications
 );
 
@@ -107,7 +118,7 @@ router.get('/category/:categoryName',
         param('categoryName').notEmpty().trim().isLength({ min: 1, max: 100 })
             .withMessage('categoryName must be between 1 and 100 characters')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.getPartsByCategory
 );
 
@@ -129,8 +140,40 @@ router.delete('/history/:id',
     [
         param('id').isInt({ min: 1 }).withMessage('comparison ID must be a positive integer')
     ],
-    validateRequest,
+    handleValidationErrors,
     comparisonController.deleteComparisonHistory
+);
+
+/**
+ * Get API statistics and health (Admin only)
+ * GET /api/comparison/api-stats
+ */
+router.get('/api-stats',
+    authorize(),
+    comparisonController.getAPIStats
+);
+
+/**
+ * Reset API provider health status (Admin only)
+ * POST /api/comparison/reset-provider-health
+ */
+router.post('/reset-provider-health',
+    authorize(),
+    [
+        body('provider').optional().isString().trim().isLength({ max: 50 })
+            .withMessage('provider must be a string with max 50 characters')
+    ],
+    handleValidationErrors,
+    comparisonController.resetProviderHealth
+);
+
+/**
+ * Clean expired cache entries (Admin only)
+ * POST /api/comparison/clean-cache
+ */
+router.post('/clean-cache',
+    authorize(),
+    comparisonController.cleanCache
 );
 
 // =============================================
@@ -169,6 +212,9 @@ router.use('*', (req, res) => {
             'GET /api/comparison/category/:categoryName',
             'GET /api/comparison/stats',
             'DELETE /api/comparison/history/:id',
+            'GET /api/comparison/api-stats (Admin)',
+            'POST /api/comparison/reset-provider-health (Admin)',
+            'POST /api/comparison/clean-cache (Admin)',
             'GET /api/comparison/health'
         ]
     });

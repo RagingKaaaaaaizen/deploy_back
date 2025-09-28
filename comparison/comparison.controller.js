@@ -319,3 +319,104 @@ exports.deleteComparisonHistory = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Get API statistics and health
+ * GET /api/comparison/api-stats
+ */
+exports.getAPIStats = async (req, res, next) => {
+    try {
+        // Ensure user is authenticated and has admin role
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                message: 'User authentication required'
+            });
+        }
+
+        // Check if user is admin (SuperAdmin or Admin)
+        if (req.user.role !== 'Admin' && req.user.role !== 'SuperAdmin') {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        const stats = await comparisonService.getAPIStats();
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Reset API provider health status
+ * POST /api/comparison/reset-provider-health
+ */
+exports.resetProviderHealth = async (req, res, next) => {
+    try {
+        // Ensure user is authenticated and has admin role
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                message: 'User authentication required'
+            });
+        }
+
+        if (req.user.role !== 'Admin' && req.user.role !== 'SuperAdmin') {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        const { provider: providerName } = req.body;
+        const apiManager = require('./api-integration/api-manager.service');
+
+        apiManager.resetProviderHealth(providerName);
+
+        res.json({
+            success: true,
+            message: providerName 
+                ? `Reset health status for provider: ${providerName}`
+                : 'Reset health status for all providers'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Clean expired cache entries
+ * POST /api/comparison/clean-cache
+ */
+exports.cleanCache = async (req, res, next) => {
+    try {
+        // Ensure user is authenticated and has admin role
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                message: 'User authentication required'
+            });
+        }
+
+        if (req.user.role !== 'Admin' && req.user.role !== 'SuperAdmin') {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        const apiManager = require('./api-integration/api-manager.service');
+        const results = await apiManager.cleanAllCaches();
+
+        res.json({
+            success: true,
+            message: 'Cache cleanup completed',
+            data: results
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};

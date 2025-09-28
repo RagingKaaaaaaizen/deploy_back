@@ -1,6 +1,7 @@
 const db = require('../_helpers/db');
 const pcComponentService = require('../pc/pc-component.service');
 const activityLogService = require('../activity-log/activity-log.service');
+const apiManager = require('./api-integration/api-manager.service');
 
 module.exports = {
     compareParts,
@@ -9,7 +10,8 @@ module.exports = {
     searchOnlineParts,
     getComparisonSuggestions,
     updatePartSpecifications,
-    getPartsByCategory
+    getPartsByCategory,
+    getAPIStats
 };
 
 /**
@@ -54,7 +56,7 @@ async function compareParts(params, userId) {
         });
 
         // Log activity
-        await activityLogService.create({
+        await activityLogService.logActivity({
             userId,
             action: 'COMPARE_PARTS',
             entityType: 'Comparison',
@@ -121,30 +123,41 @@ async function getPartSpecifications(itemId) {
  * @param {string} searchParams.query - Search query
  * @param {string} searchParams.category - Part category
  * @param {number} searchParams.limit - Result limit
- * @returns {Promise<Array>} Array of found parts
+ * @returns {Promise<Object>} Search results with metadata
  */
 async function searchOnlineParts(searchParams) {
     const { query, category, limit = 10 } = searchParams;
 
     try {
-        // Try multiple API sources
-        const results = await Promise.allSettled([
-            searchPCPartPicker(query, category, limit),
-            searchAmazonAPI(query, category, limit),
-            searchNeweggAPI(query, category, limit)
-        ]);
+        // Use API manager to search across all providers
+        const searchResults = await apiManager.searchParts(query, category, limit, {
+            maxProviders: 2, // Try up to 2 providers
+            timeout: 10000, // 10 second timeout per provider
+            deduplicate: true
+        });
 
-        // Combine and deduplicate results
-        const allResults = results
-            .filter(result => result.status === 'fulfilled')
-            .flatMap(result => result.value)
-            .slice(0, limit);
-
-        return deduplicateResults(allResults);
+        return {
+            success: true,
+            results: searchResults.results,
+            metadata: {
+                totalFound: searchResults.totalFound,
+                providers: searchResults.providers,
+                errors: searchResults.errors,
+                duplicatesRemoved: searchResults.duplicatesRemoved
+            }
+        };
 
     } catch (error) {
         console.error('Error in searchOnlineParts:', error);
-        throw error;
+        return {
+            success: false,
+            results: [],
+            error: error.message,
+            metadata: {
+                providers: [],
+                errors: [{ provider: 'unknown', error: error.message }]
+            }
+        };
     }
 }
 
@@ -191,48 +204,22 @@ async function getComparisonSuggestions(itemId) {
 /**
  * Update part specifications from external sources
  * @param {number} itemId - Item ID
+ * @param {string} searchQuery - Optional custom search query
  * @returns {Promise<Object>} Updated specifications
  */
-async function updatePartSpecifications(itemId) {
-    const item = await db.Item.findByPk(itemId, {
-        include: [
-            { model: db.Brand, as: 'brand' },
-            { model: db.Category, as: 'category' }
-        ]
-    });
-
-    if (!item) {
-        throw new Error('Item not found');
-    }
-
+async function updatePartSpecifications(itemId, searchQuery = null) {
     try {
-        // Search for specifications online
-        const searchQuery = `${item.brand.name} ${item.name}`;
-        const onlineSpecs = await searchOnlineParts({ query: searchQuery, limit: 1 });
-
-        if (onlineSpecs.length > 0) {
-            const specs = onlineSpecs[0].specifications;
-            
-            // Save specifications to database
-            for (const [specName, specValue] of Object.entries(specs)) {
-                await db.PartSpecification.upsert({
-                    itemId,
-                    specName,
-                    specValue: String(specValue),
-                    source: 'api',
-                    confidence: 0.8,
-                    lastUpdated: new Date()
-                });
-            }
-
-            return { success: true, specifications: specs };
-        }
-
-        return { success: false, message: 'No specifications found online' };
+        // Use API manager to update specifications
+        const result = await apiManager.updatePartSpecifications(itemId, searchQuery);
+        
+        return result;
 
     } catch (error) {
         console.error('Error updating specifications:', error);
-        throw error;
+        return {
+            success: false,
+            message: error.message
+        };
     }
 }
 
@@ -369,42 +356,30 @@ async function generateAISummary(part1, part2, comparisonResult) {
 }
 
 /**
- * Search PCPartPicker for parts
- * @param {string} query - Search query
- * @param {string} category - Part category
- * @param {number} limit - Result limit
- * @returns {Promise<Array>} Search results
+ * Get API manager statistics
+ * @returns {Promise<Object>} API statistics
  */
-async function searchPCPartPicker(query, category, limit) {
-    // Placeholder for PCPartPicker API integration
-    // This will be implemented in Phase 2
-    return [];
-}
+async function getAPIStats() {
+    try {
+        const [providerStats, cacheStats] = await Promise.all([
+            apiManager.getProviderStats(),
+            apiManager.getAllCacheStats()
+        ]);
 
-/**
- * Search Amazon API for parts
- * @param {string} query - Search query
- * @param {string} category - Part category
- * @param {number} limit - Result limit
- * @returns {Promise<Array>} Search results
- */
-async function searchAmazonAPI(query, category, limit) {
-    // Placeholder for Amazon API integration
-    // This will be implemented in Phase 2
-    return [];
-}
-
-/**
- * Search Newegg API for parts
- * @param {string} query - Search query
- * @param {string} category - Part category
- * @param {number} limit - Result limit
- * @returns {Promise<Array>} Search results
- */
-async function searchNeweggAPI(query, category, limit) {
-    // Placeholder for Newegg API integration
-    // This will be implemented in Phase 2
-    return [];
+        return {
+            providers: providerStats,
+            cache: cacheStats,
+            availableProviders: apiManager.getAvailableProviders()
+        };
+    } catch (error) {
+        console.error('Error getting API stats:', error);
+        return {
+            providers: {},
+            cache: {},
+            availableProviders: [],
+            error: error.message
+        };
+    }
 }
 
 /**
