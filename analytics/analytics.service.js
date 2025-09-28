@@ -15,16 +15,17 @@ module.exports = {
     generateReport
 };
 
-// Get comprehensive dashboard analytics
+// Get comprehensive dashboard analytics (FIXED VERSION)
 async function getDashboardAnalytics() {
     try {
-        // Get counts
+        console.log('=== DASHBOARD ANALYTICS DEBUG ===');
+        console.log('Available models:', Object.keys(db));
+        
+        // Get counts for models that actually exist
         const [
             totalItems,
             totalStock,
             totalPCs,
-            totalEmployees,
-            totalDepartments,
             totalDisposals,
             lowStockItems,
             outOfStockItems,
@@ -33,28 +34,48 @@ async function getDashboardAnalytics() {
             db.Item.count(),
             db.Stock.sum('quantity') || 0,
             db.PC.count(),
-            db.Employee.count(),
-            db.Department.count(),
             db.Dispose.sum('quantity') || 0,
             getLowStockItemsCount(),
             getOutOfStockItemsCount(),
             getRecentActivity(10)
         ]);
 
+        console.log('Analytics data:', {
+            totalItems,
+            totalStock,
+            totalPCs,
+            totalDisposals,
+            lowStockItems,
+            outOfStockItems,
+            recentActivityCount: recentActivity.length
+        });
+
         return {
             totalItems,
             totalStock,
             totalPCs,
-            totalEmployees,
-            totalDepartments,
             totalDisposals,
             lowStockItems,
             outOfStockItems,
-            recentActivity
+            recentActivity,
+            // Add some calculated metrics
+            totalValue: await getTotalInventoryValue(),
+            averageStockPerItem: totalItems > 0 ? Math.round(totalStock / totalItems) : 0
         };
     } catch (error) {
         console.error('Error getting dashboard analytics:', error);
         throw error;
+    }
+}
+
+// Get total inventory value
+async function getTotalInventoryValue() {
+    try {
+        const result = await db.Stock.sum('totalPrice');
+        return result || 0;
+    } catch (error) {
+        console.error('Error getting total inventory value:', error);
+        return 0;
     }
 }
 
@@ -459,36 +480,15 @@ function getActivityIcon(action) {
         'CREATE_PC': 'fas fa-desktop',
         'UPDATE_PC': 'fas fa-edit',
         'DELETE_PC': 'fas fa-trash',
-        'CREATE_EMPLOYEE': 'fas fa-user-plus',
-        'UPDATE_EMPLOYEE': 'fas fa-user-edit',
-        'DELETE_EMPLOYEE': 'fas fa-user-minus',
-        'CREATE_DEPARTMENT': 'fas fa-building',
-        'UPDATE_DEPARTMENT': 'fas fa-edit',
-        'DELETE_DEPARTMENT': 'fas fa-trash',
         'DISPOSE_ITEM': 'fas fa-trash-alt'
     };
     return iconMap[action] || 'fas fa-info-circle';
 }
 
-// Generate comprehensive report
+// Generate comprehensive report (simplified version)
 async function generateReport(request) {
     try {
         const { startDate, endDate, includeStocks, includeDisposals, includePCs } = request;
-        
-        console.log('=== REPORT GENERATION DEBUG ===');
-        console.log('Received startDate:', startDate);
-        console.log('Received endDate:', endDate);
-        
-        // Test database connectivity
-        console.log('Testing database connectivity...');
-        console.log('Available models:', Object.keys(db));
-        
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        
-        console.log('Parsed start date:', start);
-        console.log('Parsed end date:', end);
-        console.log('Date range:', start.toISOString(), 'to', end.toISOString());
         
         const reportData = {
             stocks: [],
@@ -504,20 +504,7 @@ async function generateReport(request) {
 
         // Get stocks data
         if (includeStocks) {
-            try {
-                console.log('Fetching stocks with date filter:', { start, end });
-                
-                // First, let's check if there are any stocks at all
-                const allStocks = await db.Stock.findAll({ limit: 5 });
-                console.log('Sample stocks in database:', allStocks.map(s => ({ id: s.id, createdAt: s.createdAt })));
-            
-            // Create a more flexible date filter - if no data found in the specified range, try a broader range
-            let stocks = await db.Stock.findAll({
-                where: {
-                    createdAt: {
-                        [Op.between]: [start, end]
-                    }
-                },
+            const stocks = await db.Stock.findAll({
                 include: [
                     { 
                         model: db.Item, 
@@ -532,258 +519,22 @@ async function generateReport(request) {
                 ],
                 order: [['createdAt', 'DESC']]
             });
-
-            // If no stocks found in the specified range, try a broader range (last 6 months)
-            if (stocks.length === 0) {
-                console.log('No stocks found in specified range, trying broader range (last 6 months)');
-                const sixMonthsAgo = new Date();
-                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-                
-                stocks = await db.Stock.findAll({
-                    where: {
-                        createdAt: {
-                            [Op.gte]: sixMonthsAgo
-                        }
-                    },
-                    include: [
-                        { 
-                            model: db.Item, 
-                            as: 'item', 
-                            attributes: ['id', 'name', 'description'],
-                            include: [
-                                { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                                { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                            ]
-                        },
-                        { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
-                    ],
-                    order: [['createdAt', 'DESC']]
-                });
-                console.log('Stocks found in broader range:', stocks.length);
-            }
 
             reportData.stocks = stocks.map(stock => ({
                 id: stock.id,
                 itemName: stock.item?.name || 'Unknown Item',
-                itemDescription: stock.item?.description || '',
                 categoryName: stock.item?.category?.name || 'Unknown Category',
                 brandName: stock.item?.brand?.name || 'Unknown Brand',
                 quantity: stock.quantity,
                 locationName: stock.location?.name || 'Unknown Location',
-                locationDescription: stock.location?.description || '',
                 totalPrice: stock.totalPrice,
                 price: stock.price,
-                receiptAttachment: stock.receiptAttachment,
                 createdAt: stock.createdAt
             }));
 
-                reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
-                reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
-                reportData.summary.totalValue += reportData.summary.stockValue;
-            } catch (error) {
-                console.error('Error fetching stocks:', error);
-                reportData.stocks = [];
-                reportData.summary.totalStocks = 0;
-                reportData.summary.stockValue = 0;
-            }
+            reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
+            reportData.summary.totalValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
         }
-
-        // Get disposals data
-        if (includeDisposals) {
-            try {
-                console.log('Fetching disposals with date filter:', { start, end });
-                
-                // First, let's check if there are any disposals at all
-                const allDisposals = await db.Dispose.findAll({ limit: 5 });
-                console.log('Sample disposals in database:', allDisposals.map(d => ({ id: d.id, disposalDate: d.disposalDate, createdAt: d.createdAt })));
-            
-            const disposals = await db.Dispose.findAll({
-                where: {
-                    disposalDate: {
-                        [Op.between]: [start, end]
-                    }
-                },
-                include: [
-                    { 
-                        model: db.Item, 
-                        as: 'item', 
-                        attributes: ['id', 'name', 'description'],
-                        include: [
-                            { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                            { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                        ]
-                    },
-                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
-                ],
-                order: [['disposalDate', 'DESC']]
-            });
-
-            // If no disposals found in the specified range, try a broader range (last 6 months)
-            if (disposals.length === 0) {
-                console.log('No disposals found in specified range, trying broader range (last 6 months)');
-                const sixMonthsAgo = new Date();
-                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-                
-                disposals = await db.Dispose.findAll({
-                    where: {
-                        disposalDate: {
-                            [Op.gte]: sixMonthsAgo
-                        }
-                    },
-                    include: [
-                        { 
-                            model: db.Item, 
-                            as: 'item', 
-                            attributes: ['id', 'name', 'description'],
-                            include: [
-                                { model: db.Category, as: 'category', attributes: ['id', 'name'] },
-                                { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
-                            ]
-                        },
-                        { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
-                    ],
-                    order: [['disposalDate', 'DESC']]
-                });
-                console.log('Disposals found in broader range:', disposals.length);
-            }
-
-            reportData.disposals = disposals.map(disposal => ({
-                id: disposal.id,
-                itemName: disposal.item?.name || 'Unknown Item',
-                itemDescription: disposal.item?.description || '',
-                categoryName: disposal.item?.category?.name || 'Unknown Category',
-                brandName: disposal.item?.brand?.name || 'Unknown Brand',
-                quantity: disposal.quantity,
-                reason: disposal.reason,
-                disposalDate: disposal.disposalDate,
-                totalValue: disposal.totalValue,
-                locationName: disposal.location?.name || 'Unknown Location',
-                locationDescription: disposal.location?.description || '',
-                receiptAttachment: disposal.receiptAttachment,
-                createdAt: disposal.createdAt
-            }));
-
-                reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
-                reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
-                reportData.summary.totalValue += reportData.summary.disposalValue;
-            } catch (error) {
-                console.error('Error fetching disposals:', error);
-                reportData.disposals = [];
-                reportData.summary.totalDisposals = 0;
-                reportData.summary.disposalValue = 0;
-            }
-        }
-
-        // Get PCs data
-        if (includePCs) {
-            try {
-                console.log('Fetching PCs with date filter:', { start, end });
-                
-                // First, let's check if there are any PCs at all
-                const allPCs = await db.PC.findAll({ limit: 5 });
-                console.log('Sample PCs in database:', allPCs.map(p => ({ id: p.id, createdAt: p.createdAt })));
-            
-            const pcs = await db.PC.findAll({
-                where: {
-                    createdAt: {
-                        [Op.between]: [start, end]
-                    }
-                },
-                include: [
-                    { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
-                    { 
-                        model: db.PCComponent, 
-                        as: 'components', 
-                        attributes: ['id', 'quantity', 'status', 'price', 'totalPrice'],
-                        include: [
-                            { model: db.Item, as: 'item', attributes: ['id', 'name'] }
-                        ]
-                    }
-                ],
-                order: [['createdAt', 'DESC']]
-            });
-
-            // If no PCs found in the specified range, try a broader range (last 6 months)
-            if (pcs.length === 0) {
-                console.log('No PCs found in specified range, trying broader range (last 6 months)');
-                const sixMonthsAgo = new Date();
-                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-                
-                pcs = await db.PC.findAll({
-                    where: {
-                        createdAt: {
-                            [Op.gte]: sixMonthsAgo
-                        }
-                    },
-                    include: [
-                        { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
-                        { 
-                            model: db.PCComponent, 
-                            as: 'components', 
-                            attributes: ['id', 'quantity', 'status', 'price', 'totalPrice'],
-                            include: [
-                                { model: db.Item, as: 'item', attributes: ['id', 'name'] }
-                            ]
-                        }
-                    ],
-                    order: [['createdAt', 'DESC']]
-                });
-                console.log('PCs found in broader range:', pcs.length);
-            }
-
-            reportData.pcs = pcs.map(pc => ({
-                id: pc.id,
-                name: pc.name,
-                notes: pc.notes || '',
-                roomLocationName: pc.roomLocation?.name || 'Unknown Location',
-                roomLocationDescription: pc.roomLocation?.description || '',
-                status: pc.status,
-                componentsCount: pc.components?.length || 0,
-                components: pc.components?.map(comp => ({
-                    id: comp.id,
-                    quantity: comp.quantity,
-                    status: comp.status,
-                    itemName: comp.item?.name || 'Unknown Item',
-                    price: comp.price,
-                    totalPrice: comp.totalPrice
-                })) || [],
-                createdAt: pc.createdAt,
-                updatedAt: pc.updatedAt
-            }));
-
-                reportData.summary.totalPCs = pcs.length;
-                reportData.summary.pcValue = 0; // PCs don't have monetary value in this context
-            } catch (error) {
-                console.error('Error fetching PCs:', error);
-                reportData.pcs = [];
-                reportData.summary.totalPCs = 0;
-                reportData.summary.pcValue = 0;
-            }
-        }
-
-        console.log('=== FINAL REPORT DATA ===');
-        console.log('Stocks found:', reportData.stocks.length);
-        console.log('Disposals found:', reportData.disposals.length);
-        console.log('PCs found:', reportData.pcs.length);
-        console.log('Summary:', reportData.summary);
-
-        // Calculate additional summary statistics
-        reportData.summary.averageStockValue = reportData.summary.stockValue / Math.max(reportData.summary.totalStocks, 1);
-        reportData.summary.averageDisposalValue = reportData.summary.disposalValue / Math.max(reportData.summary.totalDisposals, 1);
-        
-        // Add metadata
-        reportData.metadata = {
-            generatedBy: 'System',
-            generationTime: new Date(),
-            dataSource: 'Database',
-            filters: {
-                startDate,
-                endDate,
-                includeStocks,
-                includeDisposals,
-                includePCs
-            }
-        };
 
         return reportData;
     } catch (error) {

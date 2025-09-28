@@ -79,6 +79,9 @@ app.use('/api/activity-logs', require('./activity-log'));
 app.use('/api/analytics', require('./analytics/analytics.routes'));
 app.use('/api/approval-requests', require('./approval-requests'));
 
+// Comparison Feature Routes
+app.use('/api', require('./comparison'));
+
 // Swagger docs
 app.use('/api-docs', require('./_helpers/swagger'));
 
