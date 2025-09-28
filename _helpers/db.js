@@ -130,6 +130,11 @@ async function initialize() {
     db.Dispose = require('../dispose/dispose.model')(sequelize, DataTypes);
     db.ActivityLog = require('../activity-log/activity-log.model')(sequelize, DataTypes);
     db.ApprovalRequest = require('../approval-requests/approval-request.model')(sequelize, DataTypes);
+    
+    // Comparison Feature Models
+    db.PartSpecification = require('../comparison/part-specification.model')(sequelize, DataTypes);
+    db.ApiCache = require('../comparison/api-cache.model')(sequelize, DataTypes);
+    db.ComparisonHistory = require('../comparison/comparison-history.model')(sequelize, DataTypes);
 
     // ---------------- RELATIONSHIPS ----------------
     // Storage Location -> Stock
@@ -215,6 +220,23 @@ async function initialize() {
     
     db.Account.hasMany(db.ApprovalRequest, { foreignKey: 'approvedBy', as: 'approvedRequests' });
     db.ApprovalRequest.belongsTo(db.Account, { foreignKey: 'approvedBy', as: 'approver' });
+
+    // Comparison Feature Relationships
+    // Item -> PartSpecification
+    db.Item.hasMany(db.PartSpecification, { foreignKey: 'itemId', as: 'specifications' });
+    db.PartSpecification.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
+
+    // Account -> ComparisonHistory
+    db.Account.hasMany(db.ComparisonHistory, { foreignKey: 'userId', as: 'comparisonHistory' });
+    db.ComparisonHistory.belongsTo(db.Account, { foreignKey: 'userId', as: 'user' });
+
+    // Item -> ComparisonHistory (part1)
+    db.Item.hasMany(db.ComparisonHistory, { foreignKey: 'part1Id', as: 'comparisonsAsPart1' });
+    db.ComparisonHistory.belongsTo(db.Item, { foreignKey: 'part1Id', as: 'part1' });
+
+    // Item -> ComparisonHistory (part2)
+    db.Item.hasMany(db.ComparisonHistory, { foreignKey: 'part2Id', as: 'comparisonsAsPart2' });
+    db.ComparisonHistory.belongsTo(db.Item, { foreignKey: 'part2Id', as: 'part2' });
 
     // sync all models with database - force: true will drop and recreate all tables
     // Use { force: true } to drop and recreate all tables (WARNING: This will delete all data!)
