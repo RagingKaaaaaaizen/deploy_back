@@ -620,6 +620,194 @@ Before testing the comparison APIs, make sure you have:
 
 ---
 
+## 🔍 **Phase 3: AI Integration API Testing**
+
+### Test 36: Explain Part Specifications with AI (Authenticated)
+**Method:** `GET`  
+**URL:** `http://localhost:4000/api/comparison/explain-specifications/1?providerHint=gemini`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Expected Response:**
+```json
+{
+    "success": true,
+    "itemId": 1,
+    "explanation": "The Intel Core i7-12700K is a high-performance CPU with 12 cores and 20 threads, making it excellent for multitasking and content creation. The 3.6 GHz base clock provides solid performance, while the 5.0 GHz boost clock delivers excellent single-threaded performance for gaming.",
+    "part": {
+        "name": "Intel Core i7-12700K",
+        "brand": "Intel",
+        "category": "CPU"
+    }
+}
+```
+
+### Test 37: Generate AI Upgrade Recommendation (Authenticated)
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/comparison/upgrade-recommendation/1`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "useCase": "gaming",
+    "providerHint": "gemini"
+}
+```
+**Expected Response:**
+```json
+{
+    "success": true,
+    "currentPart": {
+        "id": 1,
+        "name": "Intel Core i7-12700K",
+        "brand": "Intel",
+        "category": "CPU",
+        "specifications": []
+    },
+    "recommendation": {
+        "recommendedPart": 0,
+        "reason": "For gaming, the Intel Core i7-12700K already provides excellent performance. Consider upgrading to Intel Core i9-13900K only if you need maximum performance for streaming or content creation.",
+        "improvement": "Minimal gaming performance improvement, better for multitasking",
+        "costBenefit": "Not cost-effective for gaming-only use case",
+        "alternatives": ["Option 1: AMD Ryzen 7 7800X3D", "Option 2: Intel Core i5-13600K"]
+    },
+    "availableParts": [],
+    "useCase": "gaming"
+}
+```
+
+### Test 38: Get AI Service Statistics (Admin Only)
+**Method:** `GET`  
+**URL:** `http://localhost:4000/api/comparison/ai-stats`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Expected Response:**
+```json
+{
+    "success": true,
+    "status": {
+        "isInitialized": true,
+        "totalProviders": 3,
+        "availableProviders": 1,
+        "providerNames": ["gemini"],
+        "hasAnyProvider": true,
+        "providerStats": {
+            "gemini": {
+                "priority": 1,
+                "isHealthy": true,
+                "lastUsed": "2024-01-15T10:30:00.000Z",
+                "errorCount": 0,
+                "successCount": 5,
+                "averageResponseTime": 1800,
+                "successRate": 100,
+                "isAvailable": true
+            },
+            "openai": {
+                "priority": 2,
+                "isHealthy": true,
+                "lastUsed": null,
+                "errorCount": 0,
+                "successCount": 0,
+                "averageResponseTime": 0,
+                "successRate": 0,
+                "isAvailable": false
+            },
+            "local-llm": {
+                "priority": 3,
+                "isHealthy": true,
+                "lastUsed": null,
+                "errorCount": 0,
+                "successCount": 0,
+                "averageResponseTime": 0,
+                "successRate": 0,
+                "isAvailable": false
+            }
+        }
+    },
+    "providers": {},
+    "availableProviders": ["gemini"],
+    "hasAnyProvider": true
+}
+```
+
+### Test 39: Reset AI Provider Health (Admin Only)
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/comparison/reset-ai-provider-health`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "provider": "gemini"
+}
+```
+**Expected Response:**
+```json
+{
+    "success": true,
+    "message": "AI provider gemini health reset"
+}
+```
+
+### Test 40: Test Enhanced AI Comparison (Authenticated)
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/comparison/compare-parts`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "part1Id": 1,
+    "part2Id": 2,
+    "comparisonType": "inventory_vs_inventory"
+}
+```
+**Expected Response (with AI):**
+```json
+{
+    "success": true,
+    "comparison": {
+        "id": 1,
+        "part1": {
+            "id": 1,
+            "name": "Intel Core i7-12700K",
+            "specifications": {
+                "cores": 12,
+                "threads": 20,
+                "baseClock": "3.6 GHz"
+            }
+        },
+        "part2": {
+            "id": 2,
+            "name": "AMD Ryzen 7 5800X",
+            "specifications": {
+                "cores": 8,
+                "threads": 16,
+                "baseClock": "3.8 GHz"
+            }
+        },
+        "comparisonResult": {
+            "winner": "part1",
+            "differences": []
+        },
+        "aiSummary": "The Intel Core i7-12700K offers superior multi-core performance with 12 cores vs 8 cores, making it better for content creation and multitasking. The AMD Ryzen 7 5800X has slightly better single-core performance for gaming.",
+        "aiRecommendation": "part1_better",
+        "confidence": 0.85,
+        "keyDifferences": [
+            "Intel has 4 more cores for better multitasking",
+            "AMD has slightly higher single-core clock speed",
+            "Intel uses newer architecture with better efficiency"
+        ],
+        "aiProvider": "gemini",
+        "processingTime": 1800,
+        "createdAt": "2024-01-15T10:30:00.000Z"
+    }
+}
+```
+
+---
+
 ## 🔍 API Documentation
 
 ### Swagger UI
@@ -704,6 +892,13 @@ The database now contains:
 - [ ] Clean cache (admin only)
 - [ ] Delete comparison history (authenticated)
 
+### **Phase 3: AI Integration API Testing**
+- [ ] Explain part specifications with AI (authenticated)
+- [ ] Generate AI upgrade recommendation (authenticated)
+- [ ] Get AI service statistics (admin only)
+- [ ] Reset AI provider health (admin only)
+- [ ] Test enhanced AI comparison (authenticated)
+
 ### **General Testing**
 - [ ] Check Swagger UI documentation
 
@@ -725,7 +920,14 @@ The database now contains:
 - ✅ **History & Statistics**
 - ✅ **Admin Functions**
 
-### **Total: 35 Comprehensive API Tests**
+### **Phase 3: AI Integration (5 Tests)**
+- ✅ **AI Explanations**
+- ✅ **Smart Recommendations**
+- ✅ **AI Service Management**
+- ✅ **Enhanced Comparisons**
+- ✅ **Provider Health Monitoring**
+
+### **Total: 40 Comprehensive API Tests**
 
 ---
 
