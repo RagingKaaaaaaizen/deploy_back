@@ -10,6 +10,8 @@
         "postinstall": "echo 'Post-install complete'"
     },
     "dependencies": {
+        "@google/genai": "^1.21.0",
+        "@google/generative-ai": "^0.24.1",
         "axios": "^1.12.2",
         "bcryptjs": "^2.4.3",
         "body-parser": "^1.19.0",
