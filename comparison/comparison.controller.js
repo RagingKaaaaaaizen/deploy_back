@@ -420,3 +420,147 @@ exports.cleanCache = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Explain part specifications using AI
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const explainSpecifications = async (req, res, next) => {
+    try {
+        const { itemId } = req.params;
+        const { providerHint } = req.query;
+
+        if (!itemId) {
+            return res.status(400).json({
+                message: 'Item ID is required'
+            });
+        }
+
+        const comparisonService = require('./comparison.service');
+        const result = await comparisonService.explainSpecifications(itemId, providerHint);
+
+        res.json(result);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Generate upgrade recommendation using AI
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const generateUpgradeRecommendation = async (req, res, next) => {
+    try {
+        const { itemId } = req.params;
+        const { useCase, providerHint } = req.body;
+
+        if (!itemId) {
+            return res.status(400).json({
+                message: 'Item ID is required'
+            });
+        }
+
+        if (!useCase) {
+            return res.status(400).json({
+                message: 'Use case is required (e.g., gaming, work, general)'
+            });
+        }
+
+        const comparisonService = require('./comparison.service');
+        const result = await comparisonService.generateUpgradeRecommendation(itemId, useCase, providerHint);
+
+        res.json(result);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get AI service statistics
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const getAIStats = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                message: 'User authentication required'
+            });
+        }
+
+        if (req.user.role !== 'Admin' && req.user.role !== 'SuperAdmin') {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        const comparisonService = require('./comparison.service');
+        const result = await comparisonService.getAIStats();
+
+        res.json(result);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Reset AI provider health status
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const resetAIProviderHealth = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                message: 'User authentication required'
+            });
+        }
+
+        if (req.user.role !== 'Admin' && req.user.role !== 'SuperAdmin') {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        const { provider } = req.body;
+
+        const aiManager = require('./ai/ai-manager.service');
+        aiManager.resetProviderHealth(provider);
+
+        res.json({
+            success: true,
+            message: provider ? `AI provider ${provider} health reset` : 'All AI providers health reset'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = {
+    compareParts: exports.compareParts,
+    getComparisonHistory: exports.getComparisonHistory,
+    getPartSpecifications: exports.getPartSpecifications,
+    searchOnlineParts: exports.searchOnlineParts,
+    getComparisonSuggestions: exports.getComparisonSuggestions,
+    updatePartSpecifications: exports.updatePartSpecifications,
+    getPartsByCategory: exports.getPartsByCategory,
+    getStats: exports.getComparisonStats,
+    getAPIStats: exports.getAPIStats,
+    resetProviderHealth: exports.resetProviderHealth,
+    cleanCache: exports.cleanCache,
+    deleteComparisonHistory: exports.deleteComparisonHistory,
+    explainSpecifications,
+    generateUpgradeRecommendation,
+    getAIStats,
+    resetAIProviderHealth
+};

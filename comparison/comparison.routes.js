@@ -128,7 +128,7 @@ router.get('/category/:categoryName',
  */
 router.get('/stats',
     authorize(),
-    comparisonController.getComparisonStats
+    comparisonController.getStats
 );
 
 /**
@@ -142,6 +142,39 @@ router.delete('/history/:id',
     ],
     handleValidationErrors,
     comparisonController.deleteComparisonHistory
+);
+
+// =============================================
+// AI INTEGRATION ROUTES
+// =============================================
+
+/**
+ * Explain part specifications using AI
+ * GET /api/comparison/explain-specifications/:itemId
+ */
+router.get('/explain-specifications/:itemId',
+    authorize(),
+    [
+        param('itemId').isInt({ min: 1 }).withMessage('itemId must be a positive integer'),
+        query('providerHint').optional().isString().withMessage('providerHint must be a string')
+    ],
+    handleValidationErrors,
+    comparisonController.explainSpecifications
+);
+
+/**
+ * Generate upgrade recommendation using AI
+ * POST /api/comparison/upgrade-recommendation/:itemId
+ */
+router.post('/upgrade-recommendation/:itemId',
+    authorize(),
+    [
+        param('itemId').isInt({ min: 1 }).withMessage('itemId must be a positive integer'),
+        body('useCase').isString().notEmpty().withMessage('useCase is required'),
+        body('providerHint').optional().isString().withMessage('providerHint must be a string')
+    ],
+    handleValidationErrors,
+    comparisonController.generateUpgradeRecommendation
 );
 
 /**
@@ -174,6 +207,28 @@ router.post('/reset-provider-health',
 router.post('/clean-cache',
     authorize(),
     comparisonController.cleanCache
+);
+
+/**
+ * Get AI service statistics (Admin only)
+ * GET /api/comparison/ai-stats
+ */
+router.get('/ai-stats',
+    authorize(['Admin', 'SuperAdmin']),
+    comparisonController.getAIStats
+);
+
+/**
+ * Reset AI provider health status (Admin only)
+ * POST /api/comparison/reset-ai-provider-health
+ */
+router.post('/reset-ai-provider-health',
+    authorize(['Admin', 'SuperAdmin']),
+    [
+        body('provider').optional().isString().withMessage('provider must be a string')
+    ],
+    handleValidationErrors,
+    comparisonController.resetAIProviderHealth
 );
 
 // =============================================
@@ -212,9 +267,13 @@ router.use('*', (req, res) => {
             'GET /api/comparison/category/:categoryName',
             'GET /api/comparison/stats',
             'DELETE /api/comparison/history/:id',
+            'GET /api/comparison/explain-specifications/:itemId',
+            'POST /api/comparison/upgrade-recommendation/:itemId',
             'GET /api/comparison/api-stats (Admin)',
             'POST /api/comparison/reset-provider-health (Admin)',
             'POST /api/comparison/clean-cache (Admin)',
+            'GET /api/comparison/ai-stats (Admin)',
+            'POST /api/comparison/reset-ai-provider-health (Admin)',
             'GET /api/comparison/health'
         ]
     });

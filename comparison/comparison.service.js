@@ -2,6 +2,7 @@ const db = require('../_helpers/db');
 const pcComponentService = require('../pc/pc-component.service');
 const activityLogService = require('../activity-log/activity-log.service');
 const apiManager = require('./api-integration/api-manager.service');
+const aiManager = require('./ai/ai-manager.service');
 
 module.exports = {
     compareParts,
@@ -11,7 +12,10 @@ module.exports = {
     getComparisonSuggestions,
     updatePartSpecifications,
     getPartsByCategory,
-    getAPIStats
+    getAPIStats,
+    explainSpecifications,
+    generateUpgradeRecommendation,
+    getAIStats
 };
 
 /**
@@ -333,26 +337,49 @@ async function performTechnicalComparison(part1, part2) {
  * @returns {Promise<Object>} AI summary with recommendation
  */
 async function generateAISummary(part1, part2, comparisonResult) {
-    // This is a placeholder for AI integration
-    // In Phase 3, this will be replaced with actual AI service calls
-    
-    const summary = `Comparing ${part1.name} with ${part2.name}. `;
-    let recommendation = 'similar';
-    let confidence = 0.5;
+    try {
+        // Use AI Manager to generate intelligent comparison
+        const aiResult = await aiManager.generateComparison(part1, part2, comparisonResult);
+        
+        return {
+            summary: aiResult.summary,
+            recommendation: aiResult.recommendation,
+            confidence: aiResult.confidence,
+            keyDifferences: aiResult.keyDifferences,
+            aiProvider: aiResult.aiProvider,
+            processingTime: aiResult.processingTime
+        };
+        
+    } catch (error) {
+        console.error('Error generating AI summary:', error);
+        
+        // Fallback to basic comparison
+        const summary = `Comparing ${part1.name} with ${part2.name}. `;
+        let recommendation = 'similar';
+        let confidence = 0.5;
 
-    if (comparisonResult.winner === 'part1') {
-        recommendation = 'part1_better';
-        confidence = 0.8;
-    } else if (comparisonResult.winner === 'part2') {
-        recommendation = 'part2_better';
-        confidence = 0.8;
+        if (comparisonResult.winner === 'part1') {
+            recommendation = 'part1_better';
+            confidence = 0.8;
+            summary += `${part1.name} appears to be the better choice based on specifications.`;
+        } else if (comparisonResult.winner === 'part2') {
+            recommendation = 'part2_better';
+            confidence = 0.8;
+            summary += `${part2.name} appears to be the better choice based on specifications.`;
+        } else {
+            summary += `Both parts appear to have similar specifications and performance.`;
+            confidence = 0.6;
+        }
+
+        return {
+            summary,
+            recommendation,
+            confidence,
+            keyDifferences: comparisonResult.differences || [],
+            aiProvider: 'fallback',
+            processingTime: 0
+        };
     }
-
-    return {
-        summary,
-        recommendation,
-        confidence
-    };
 }
 
 /**
@@ -459,4 +486,164 @@ function deduplicateResults(results) {
         seen.add(key);
         return true;
     });
+}
+
+/**
+ * Explain part specifications using AI
+ * @param {number} itemId - Item ID
+ * @param {string} providerHint - AI provider hint (optional)
+ * @returns {Promise<Object>} AI explanation
+ */
+async function explainSpecifications(itemId, providerHint = null) {
+    try {
+        const item = await db.Item.findByPk(itemId, {
+            include: [
+                { model: db.Category, as: 'category' },
+                { model: db.Brand, as: 'brand' },
+                { model: db.PartSpecification, as: 'specifications' }
+            ]
+        });
+
+        if (!item) {
+            throw new Error('Item not found');
+        }
+
+        const part = {
+            id: item.id,
+            name: item.name,
+            brand: item.brand?.name || 'Unknown',
+            category: item.category?.name || 'Unknown',
+            specifications: item.specifications || []
+        };
+
+        const explanation = await aiManager.explainSpecifications(part, part.category, providerHint);
+
+        return {
+            success: true,
+            itemId: itemId,
+            explanation: explanation,
+            part: {
+                name: part.name,
+                brand: part.brand,
+                category: part.category
+            }
+        };
+
+    } catch (error) {
+        console.error('Error explaining specifications:', error);
+        throw error;
+    }
+}
+
+/**
+ * Generate upgrade recommendation using AI
+ * @param {number} currentItemId - Current item ID
+ * @param {string} useCase - Use case (gaming, work, etc.)
+ * @param {string} providerHint - AI provider hint (optional)
+ * @returns {Promise<Object>} AI upgrade recommendation
+ */
+async function generateUpgradeRecommendation(currentItemId, useCase, providerHint = null) {
+    try {
+        // Get current part
+        const currentItem = await db.Item.findByPk(currentItemId, {
+            include: [
+                { model: db.Category, as: 'category' },
+                { model: db.Brand, as: 'brand' },
+                { model: db.PartSpecification, as: 'specifications' }
+            ]
+        });
+
+        if (!currentItem) {
+            throw new Error('Current item not found');
+        }
+
+        const currentPart = {
+            id: currentItem.id,
+            name: currentItem.name,
+            brand: currentItem.brand?.name || 'Unknown',
+            category: currentItem.category?.name || 'Unknown',
+            specifications: currentItem.specifications || []
+        };
+
+        // Get available upgrade options (same category, different items)
+        const availableItems = await db.Item.findAll({
+            where: {
+                categoryId: currentItem.categoryId,
+                id: { [db.Sequelize.Op.ne]: currentItemId }
+            },
+            include: [
+                { model: db.Category, as: 'category' },
+                { model: db.Brand, as: 'brand' },
+                { model: db.PartSpecification, as: 'specifications' }
+            ],
+            limit: 5 // Limit to top 5 options
+        });
+
+        const availableParts = availableItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            brand: item.brand?.name || 'Unknown',
+            category: item.category?.name || 'Unknown',
+            specifications: item.specifications || [],
+            price: item.price || null
+        }));
+
+        if (availableParts.length === 0) {
+            return {
+                success: true,
+                currentPart: currentPart,
+                recommendation: {
+                    recommendedPart: null,
+                    reason: 'No upgrade options available in the same category',
+                    improvement: 'Consider looking at different categories or brands',
+                    costBenefit: 'Unable to assess without alternatives',
+                    alternatives: []
+                },
+                availableParts: [],
+                useCase: useCase
+            };
+        }
+
+        const recommendation = await aiManager.generateUpgradeRecommendation(
+            currentPart, 
+            availableParts, 
+            useCase, 
+            providerHint
+        );
+
+        return {
+            success: true,
+            currentPart: currentPart,
+            recommendation: recommendation,
+            availableParts: availableParts,
+            useCase: useCase
+        };
+
+    } catch (error) {
+        console.error('Error generating upgrade recommendation:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get AI service statistics
+ * @returns {Promise<Object>} AI statistics
+ */
+async function getAIStats() {
+    try {
+        const aiStatus = aiManager.getStatus();
+        const providerStats = aiManager.getProviderStats();
+
+        return {
+            success: true,
+            status: aiStatus,
+            providers: providerStats,
+            availableProviders: aiManager.getAvailableProviders(),
+            hasAnyProvider: aiManager.isAnyProviderAvailable()
+        };
+
+    } catch (error) {
+        console.error('Error getting AI stats:', error);
+        throw error;
+    }
 }
