@@ -1,4 +1,3 @@
-const PCPartPickerJSONAPIService = require('./pcpartpicker-json-api.service');
 const MockAPIService = require('./mock-api.service');
 const NeweggAPIService = require('./newegg-api.service');
 const db = require('../../_helpers/db');
@@ -23,8 +22,7 @@ class APIManagerService {
         try {
             // Add providers in order of priority
             this.addProvider('mock', new MockAPIService(), 1); // Primary for testing
-            this.addProvider('pcpartpicker-json', new PCPartPickerJSONAPIService(), 2); // JSON API (best)
-            this.addProvider('newegg', new NeweggAPIService(), 3); // Real API provider
+            this.addProvider('newegg', new NeweggAPIService(), 2); // Real API provider
             
             // Future providers can be added here
             // this.addProvider('amazon', new AmazonAPIService(), 4);
