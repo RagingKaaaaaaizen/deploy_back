@@ -1,4 +1,5 @@
-const DigikeyAPIService = require('./digikey-api.service');
+const PCPartPickerAPIService = require('./pcpartpicker-api.service');
+const MockAPIService = require('./mock-api.service');
 const db = require('../../_helpers/db');
 
 /**
@@ -19,11 +20,13 @@ class APIManagerService {
      */
     initializeProviders() {
         try {
-            // Add Digikey as the primary and only API provider
-            this.addProvider('digikey', new DigikeyAPIService(), 1); // Primary - Digikey API (best)
+            // Add providers in order of priority
+            this.addProvider('mock', new MockAPIService(), 1); // Primary for testing
+            this.addProvider('pcpartpicker', new PCPartPickerAPIService(), 2);
             
-            // Future providers can be added here if needed
-            // this.addProvider('amazon', new AmazonAPIService(), 2);
+            // Future providers can be added here
+            // this.addProvider('amazon', new AmazonAPIService(), 3);
+            // this.addProvider('newegg', new NeweggAPIService(), 4);
             
             this.isInitialized = true;
             console.log('API Manager initialized with providers:', Array.from(this.providers.keys()));
