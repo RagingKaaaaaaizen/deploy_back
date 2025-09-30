@@ -1,4 +1,8 @@
 require('rootpath')();
+
+// Load environment configuration FIRST
+require('./config-env');
+
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');

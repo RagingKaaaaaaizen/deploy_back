@@ -9,8 +9,8 @@ class DigikeyAPIService extends BaseAPIService {
     constructor() {
         super('digikey');
         this.baseURL = 'https://api.digikey.com/products/v4';
-        this.clientId = 'zfdcFUtZ1wa2NjAv1gEdTi8kz2ymYQ3U8s5AGdjkJkHNw2Of';
-        this.clientSecret = 'WyWozn1GUA1FUy8NIxNatTtgOZv8ztGYFT5EhUp8XoQ35oxBD1GccAV0gjukm5Bm';
+        this.clientId = 'QccsmyqM1PXUmNZDHiGdAfaUVGr0Piu7faXfUCQkpX0YM6KC';
+        this.clientSecret = 'zRj3udVf5jisLp2J8o5MsU29rNduhOVvT1PrMtxjQNdeKODG1KbOGjGyQS3EfMCg';
         this.accessToken = null;
         this.tokenExpiry = null;
     }
@@ -151,15 +151,15 @@ class DigikeyAPIService extends BaseAPIService {
         }
 
         const results = data.Products.map(product => ({
-            id: product.DigiKeyPartNumber || product.ManufacturerProductNumber,
-            name: product.Description?.MarketingInformation || product.Description?.ProductInformation || 'Unknown Product',
+            id: product.ProductVariations?.[0]?.DigiKeyProductNumber || product.ManufacturerProductNumber,
+            name: product.Description?.ProductDescription || product.Description?.DetailedDescription || 'Unknown Product',
             category: this.mapDigikeyCategoryToOurs(product.Category?.Name),
             price: product.UnitPrice || 0,
             specifications: this.extractSpecifications(product),
             provider: 'digikey',
             availability: product.QuantityAvailable > 0 ? 'in_stock' : 'out_of_stock',
             manufacturer: product.Manufacturer?.Name || 'Unknown',
-            partNumber: product.ManufacturerProductNumber || product.DigiKeyPartNumber,
+            partNumber: product.ManufacturerProductNumber || product.ProductVariations?.[0]?.DigiKeyProductNumber,
             datasheetUrl: product.DatasheetUrl,
             productUrl: product.ProductUrl,
             imageUrl: product.PhotoUrl,
@@ -181,15 +181,15 @@ class DigikeyAPIService extends BaseAPIService {
         return {
             success: true,
             product: {
-                id: data.DigiKeyPartNumber || data.ManufacturerProductNumber,
-                name: data.Description?.MarketingInformation || data.Description?.ProductInformation || 'Unknown Product',
+                id: data.ProductVariations?.[0]?.DigiKeyProductNumber || data.ManufacturerProductNumber,
+                name: data.Description?.ProductDescription || data.Description?.DetailedDescription || 'Unknown Product',
                 category: this.mapDigikeyCategoryToOurs(data.Category?.Name),
                 price: data.UnitPrice || 0,
                 specifications: this.extractSpecifications(data),
                 provider: 'digikey',
                 availability: data.QuantityAvailable > 0 ? 'in_stock' : 'out_of_stock',
                 manufacturer: data.Manufacturer?.Name || 'Unknown',
-                partNumber: data.ManufacturerProductNumber || data.DigiKeyPartNumber,
+                partNumber: data.ManufacturerProductNumber || data.ProductVariations?.[0]?.DigiKeyProductNumber,
                 datasheetUrl: data.DatasheetUrl,
                 productUrl: data.ProductUrl,
                 imageUrl: data.PhotoUrl,
@@ -239,8 +239,8 @@ class DigikeyAPIService extends BaseAPIService {
         // Extract from product parameters if available
         if (product.Parameters && Array.isArray(product.Parameters)) {
             product.Parameters.forEach(param => {
-                if (param.Parameter && param.Value) {
-                    specs[param.Parameter] = param.Value;
+                if (param.ParameterText && param.ValueText) {
+                    specs[param.ParameterText] = param.ValueText;
                 }
             });
         }
@@ -250,8 +250,8 @@ class DigikeyAPIService extends BaseAPIService {
             product.ProductVariations.forEach(variation => {
                 if (variation.Parameters && Array.isArray(variation.Parameters)) {
                     variation.Parameters.forEach(param => {
-                        if (param.Parameter && param.Value) {
-                            specs[param.Parameter] = param.Value;
+                        if (param.ParameterText && param.ValueText) {
+                            specs[param.ParameterText] = param.ValueText;
                         }
                     });
                 }

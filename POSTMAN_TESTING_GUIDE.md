@@ -315,12 +315,21 @@ Before testing the comparison APIs, make sure you have:
 ```
 
 ### Test 24: Search PC Parts Online (Authenticated)
+
+**💡 Tips for Enhanced Mock API Search (Primary Provider):**
+- **Mock API** is now the PRIMARY provider with 18 comprehensive test products
+- **Smart search algorithm** with intelligent ranking and scoring
+- **Realistic test data** with current market pricing ($69.99 - $1199.99)
+- **Multiple brands** including Intel, AMD, NVIDIA, Samsung, Corsair, ASUS
+- **Guaranteed results** - Mock API will always return data for testing
+- **Fallback chain**: Mock API → Oxylabs → DigiKey
+
 **Method:** `POST`  
 **URL:** `http://localhost:4000/api/comparison/search-online`  
 **Headers:** 
 - `Content-Type: application/json`
 - `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
+**Body (JSON) - Recommended for Enhanced Mock API:**
 ```json
 {
     "query": "Intel Core i7",
@@ -329,30 +338,181 @@ Before testing the comparison APIs, make sure you have:
 }
 ```
 
-**Expected Response:**
+**Alternative Search Terms (all guaranteed to work with Mock API):**
+```json
+{
+    "query": "NVIDIA RTX",
+    "category": "gpu",
+    "limit": 5
+}
+```
+
+**Or:**
+```json
+{
+    "query": "AMD Ryzen",
+    "category": "cpu", 
+    "limit": 5
+}
+```
+
+**For Memory/RAM Searches:**
+```json
+{
+    "query": "DDR5 memory",
+    "category": "memory",
+    "limit": 5
+}
+```
+
+**Other Excellent Search Terms for Mock API:**
+```json
+// For Storage/SSDs
+{
+    "query": "Samsung SSD",
+    "category": "storage",
+    "limit": 5
+}
+
+// For Graphics Cards
+{
+    "query": "RTX 4070",
+    "category": "gpu", 
+    "limit": 5
+}
+
+// For Power Supplies
+{
+    "query": "Corsair PSU",
+    "category": "psu",
+    "limit": 5
+}
+
+// For Monitors
+{
+    "query": "ASUS monitor",
+    "category": "monitor",
+    "limit": 5
+}
+
+// For Motherboards
+{
+    "query": "ASUS motherboard",
+    "category": "motherboard",
+    "limit": 5
+}
+
+// For Cases
+{
+    "query": "Fractal Design case",
+    "category": "case",
+    "limit": 5
+}
+```
+
+**Expected Response (Enhanced Mock API - Guaranteed Results):**
 ```json
 {
     "success": true,
     "results": [
         {
-            "id": "mock_1",
+            "id": "mock-cpu-001",
             "name": "Intel Core i7-12700K",
+            "brand": "Intel",
+            "model": "i7-12700K",
             "category": "cpu",
             "price": 399.99,
+            "currency": "USD",
+            "image": "https://example.com/cpu1.jpg",
+            "url": "https://example.com/product/cpu1",
             "specifications": {
-                "cores": 12,
-                "threads": 20,
-                "baseClock": "3.6 GHz",
-                "boostClock": "5.0 GHz"
+                "cores": { "name": "Cores", "value": "12", "unit": "cores" },
+                "threads": { "name": "Threads", "value": "20", "unit": "threads" },
+                "base_clock": { "name": "Base Clock", "value": "3.6", "unit": "GHz" },
+                "boost_clock": { "name": "Max Turbo Frequency", "value": "5.0", "unit": "GHz" },
+                "tdp": { "name": "TDP", "value": "125", "unit": "W" },
+                "socket": { "name": "Socket", "value": "LGA 1700", "unit": null },
+                "lithography": { "name": "Lithography", "value": "10", "unit": "nm" }
+            },
+            "provider": "mock",
+            "availability": "in_stock",
+            "description": "High-quality Intel Core i7-12700K for professional and gaming use.",
+            "features": [
+                "High performance",
+                "Energy efficient",
+                "Advanced thermal management",
+                "Multi-core processing"
+            ],
+            "reviews": [
+                {
+                    "rating": 5,
+                    "title": "Great CPU!",
+                    "content": "This Intel Core i7-12700K performs excellently. Highly recommended.",
+                    "author": "User123",
+                    "date": "2024-01-15T10:30:00.000Z"
+                }
+            ]
+        },
+        {
+            "id": "mock-cpu-002",
+            "name": "Intel Core i5-12600K",
+            "brand": "Intel",
+            "model": "i5-12600K",
+            "category": "cpu",
+            "price": 289.99,
+            "currency": "USD",
+            "image": "https://example.com/cpu2.jpg",
+            "url": "https://example.com/product/cpu2",
+            "specifications": {
+                "cores": { "name": "Cores", "value": "10", "unit": "cores" },
+                "threads": { "name": "Threads", "value": "16", "unit": "threads" },
+                "base_clock": { "name": "Base Clock", "value": "3.7", "unit": "GHz" },
+                "boost_clock": { "name": "Max Turbo Frequency", "value": "4.9", "unit": "GHz" },
+                "tdp": { "name": "TDP", "value": "125", "unit": "W" },
+                "socket": { "name": "Socket", "value": "LGA 1700", "unit": null },
+                "lithography": { "name": "Lithography", "value": "10", "unit": "nm" }
+            },
+            "provider": "mock",
+            "availability": "in_stock"
+        }
+    ],
+    "totalResults": 2,
+    "searchTime": 150
+}
+```
+
+**Expected Response (NVIDIA RTX Search):**
+```json
+{
+    "success": true,
+    "results": [
+        {
+            "id": "mock-gpu-001",
+            "name": "NVIDIA GeForce RTX 4070",
+            "brand": "NVIDIA",
+            "model": "RTX 4070",
+            "category": "gpu",
+            "price": 599.99,
+            "currency": "USD",
+            "image": "https://example.com/gpu1.jpg",
+            "url": "https://example.com/product/gpu1",
+            "specifications": {
+                "memory": { "name": "Memory", "value": "12", "unit": "GB" },
+                "memory_type": { "name": "Memory Type", "value": "GDDR6X", "unit": null },
+                "base_clock_gpu": { "name": "Base Clock", "value": "1920", "unit": "MHz" },
+                "boost_clock_gpu": { "name": "Boost Clock", "value": "2475", "unit": "MHz" },
+                "memory_bandwidth": { "name": "Memory Bandwidth", "value": "504.2", "unit": "GB/s" },
+                "cuda_cores": { "name": "CUDA Cores", "value": "5888", "unit": "cores" }
             },
             "provider": "mock",
             "availability": "in_stock"
         }
     ],
     "totalResults": 1,
-    "searchTime": 150
+    "searchTime": 120
 }
 ```
+
 
 ### Test 25: Get Part Specifications (Authenticated)
 **Method:** `GET`  
@@ -564,11 +724,18 @@ Before testing the comparison APIs, make sure you have:
             "averageResponseTime": 100,
             "lastUsed": null
         },
-        "pcpartpicker": {
+        "oxylabs": {
             "status": "healthy",
             "requests": 0,
             "successRate": 1.0,
             "averageResponseTime": 2000,
+            "lastUsed": null
+        },
+        "digikey": {
+            "status": "healthy",
+            "requests": 0,
+            "successRate": 1.0,
+            "averageResponseTime": 1500,
             "lastUsed": null
         }
     },

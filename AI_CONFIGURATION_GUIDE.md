@@ -8,6 +8,24 @@ This guide explains how to configure AI services for generating user-friendly co
 
 ## 🔧 **Configuration Options**
 
+### **API Provider Setup (DigiKey)**
+
+Your system is configured to use DigiKey as the primary API provider for fetching PC hardware data.
+
+#### **Environment Variables:**
+```bash
+# DigiKey API Configuration
+DIGIKEY_CLIENT_ID=your_digikey_client_id
+DIGIKEY_CLIENT_SECRET=your_digikey_client_secret
+```
+
+#### **Quick Setup:**
+Use the provided setup scripts to automatically configure both DigiKey and Gemini:
+- **Windows Batch**: `setup-digikey-gemini.bat`
+- **PowerShell**: `./setup-digikey-gemini.ps1`
+
+---
+
 ### **1. Google Gemini Integration (Recommended - FREE!)**
 
 Google Gemini provides excellent AI responses with a generous free tier - perfect for getting started!

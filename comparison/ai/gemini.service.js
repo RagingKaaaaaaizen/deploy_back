@@ -6,7 +6,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 class GeminiService {
     constructor() {
         this.apiKey = process.env.GEMINI_API_KEY || null;
-        this.model = 'gemini-1.5-flash'; // Default model
+        this.model = 'gemini-pro-latest'; // Default model (use -latest suffix)
         this.maxTokens = 1000;
         this.temperature = 0.7;
         this.genAI = null;
@@ -15,6 +15,7 @@ class GeminiService {
             try {
                 this.genAI = new GoogleGenerativeAI(this.apiKey);
                 console.log('Gemini service initialized successfully');
+                console.log('Gemini model in use:', this.model);
             } catch (error) {
                 console.error('Error initializing Gemini service:', error);
                 this.genAI = null;
@@ -65,8 +66,11 @@ class GeminiService {
             const prompt = this.buildExplanationPrompt(part, category);
             
             const response = await this.callGemini(prompt);
-            
-            return response.response?.text() || this.generateMockExplanation(part, category);
+            const extracted = this.extractTextFromResponse(response);
+            if (extracted && extracted.trim()) {
+                return extracted.trim();
+            }
+            return this.generateMockExplanation(part, category);
 
         } catch (error) {
             console.error('Gemini explanation error:', error);
@@ -115,6 +119,42 @@ class GeminiService {
 
         const result = await model.generateContent(prompt);
         return result;
+    }
+
+    /**
+     * Extract plain text from Gemini SDK response
+     * @param {Object} response - SDK response object
+     * @returns {string|null}
+     */
+    extractTextFromResponse(response) {
+        try {
+            // Preferred helper if available
+            const textFn = response?.response?.text;
+            if (typeof textFn === 'function') {
+                const txt = response.response.text();
+                if (txt && txt.trim().length > 0) return txt;
+            }
+
+            // Fallback: concatenate candidate parts
+            const candidates = response?.response?.candidates || response?.candidates || [];
+            if (Array.isArray(candidates) && candidates.length > 0) {
+                const parts = candidates[0]?.content?.parts || [];
+                const joined = parts
+                    .map(p => (typeof p?.text === 'string' ? p.text : ''))
+                    .filter(Boolean)
+                    .join('\n');
+                if (joined && joined.trim().length > 0) return joined;
+            }
+
+            // Fallback: try top-level text
+            const maybeText = response?.text;
+            if (typeof maybeText === 'string' && maybeText.trim().length > 0) return maybeText;
+
+            return null;
+        } catch (err) {
+            console.warn('Failed to extract text from Gemini response:', err?.message || err);
+            return null;
+        }
     }
 
     /**

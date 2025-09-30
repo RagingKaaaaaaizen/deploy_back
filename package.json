@@ -6,6 +6,7 @@
     "scripts": {
         "start": "cross-env NODE_ENV=production node ./server.js",
         "start:dev": "cross-env NODE_ENV=development DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost nodemon ./server.js",
+        "start:with-apis": "cross-env NODE_ENV=development DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost GEMINI_API_KEY=AIzaSyB54vqGM8AdBLR5r7P9lDc_84abr072HpU DIGIKEY_CLIENT_ID=QccsmyqM1PXUmNZDHiGdAfaUVGr0Piu7faXfUCQkpX0YM6KC DIGIKEY_CLIENT_SECRET=zRj3udVf5jisLp2J8o5MsU29rNduhOVvT1PrMtxjQNdeKODG1KbOGjGyQS3EfMCg nodemon ./server.js",
         "build": "echo 'No build step required for Node.js'",
         "postinstall": "echo 'Post-install complete'"
     },
