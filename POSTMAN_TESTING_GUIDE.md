@@ -281,6 +281,208 @@ Authorization: Bearer YOUR_JWT_TOKEN_HERE
 
 ---
 
+## 🖥️ PC Build Template Testing
+
+### Test 23: Get All Templates
+**Method:** `GET`  
+**URL:** `http://localhost:4000/api/pc-build-templates`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Expected Response:**
+```json
+[
+    {
+        "id": 1,
+        "name": "Office Standard 2025",
+        "description": "Standard office PC configuration",
+        "components": [
+            {
+                "id": 1,
+                "categoryId": 1,
+                "itemId": 5,
+                "quantity": 1,
+                "category": { "id": 1, "name": "CPU" },
+                "item": { "id": 5, "name": "Intel Core i5-12400" }
+            }
+        ],
+        "createdAt": "2025-01-15T10:30:00.000Z"
+    }
+]
+```
+
+### Test 24: Create New Template (Admin Only)
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/pc-build-templates`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "name": "Gaming PC Standard",
+    "description": "Standard gaming PC configuration for computer lab",
+    "components": [
+        {
+            "categoryId": 1,
+            "itemId": 10,
+            "quantity": 1,
+            "remarks": "High-performance CPU"
+        },
+        {
+            "categoryId": 3,
+            "itemId": 15,
+            "quantity": 2,
+            "remarks": "16GB RAM (2x8GB)"
+        }
+    ]
+}
+```
+
+### Test 25: Get Template by ID
+**Method:** `GET`  
+**URL:** `http://localhost:4000/api/pc-build-templates/1`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`
+
+### Test 26: Update Template (Admin Only)
+**Method:** `PUT`  
+**URL:** `http://localhost:4000/api/pc-build-templates/1`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "name": "Office Standard 2025 - Updated",
+    "description": "Updated office configuration",
+    "components": [
+        {
+            "categoryId": 1,
+            "itemId": 8,
+            "quantity": 1
+        }
+    ]
+}
+```
+
+### Test 27: Duplicate Template (Admin Only)
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/pc-build-templates/1/duplicate`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "newName": "Gaming PC Standard (Copy)"
+}
+```
+
+### Test 28: Compare PC with Template
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/pc-build-templates/compare/1/1`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Expected Response:**
+```json
+{
+    "pcId": 1,
+    "templateId": 1,
+    "templateName": "Office Standard 2025",
+    "totalComponents": 5,
+    "matchCount": 3,
+    "mismatchCount": 2,
+    "matches": false,
+    "matchPercentage": 60,
+    "mismatches": [
+        {
+            "categoryId": 2,
+            "categoryName": "GPU",
+            "reason": "missing",
+            "template": {
+                "itemId": 12,
+                "itemName": "NVIDIA GTX 1650",
+                "quantity": 1
+            },
+            "actual": null,
+            "suggestedAction": "Add component to PC"
+        }
+    ]
+}
+```
+
+### Test 29: Bulk Compare PCs
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/pc-build-templates/compare-bulk`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "pcIds": [1, 2, 3],
+    "templateId": 1
+}
+```
+
+### Test 30: Apply Template to PC (Admin Only)
+**Method:** `POST`  
+**URL:** `http://localhost:4000/api/pc-build-templates/apply/1/1`  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Body (JSON):**
+```json
+{
+    "options": {
+        "replaceAll": false,
+        "replaceCategories": [2, 3]
+    }
+}
+```
+**Expected Response:**
+```json
+{
+    "success": true,
+    "replacedCount": 2,
+    "replacedComponents": [
+        {
+            "categoryName": "GPU",
+            "oldItem": "None",
+            "newItem": "NVIDIA GTX 1650",
+            "quantity": 1
+        }
+    ]
+}
+```
+
+### Test 31: Get Template Statistics
+**Method:** `GET`  
+**URL:** `http://localhost:4000/api/pc-build-templates/1/stats`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Expected Response:**
+```json
+{
+    "templateId": 1,
+    "templateName": "Office Standard 2025",
+    "totalPCs": 10,
+    "matchingPCs": 6,
+    "partialMatchPCs": 3,
+    "nonMatchingPCs": 1,
+    "complianceRate": 60
+}
+```
+
+### Test 32: Delete Template (Admin Only)
+**Method:** `DELETE`  
+**URL:** `http://localhost:4000/api/pc-build-templates/1`  
+**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
+**Expected Response:**
+```json
+{
+    "message": "Template deleted successfully"
+}
+```
+
+---
+
 ## 🔍 API Documentation
 
 ### Swagger UI
@@ -331,23 +533,46 @@ The database now contains:
 
 ## 🎯 Testing Checklist
 
+**Basic Tests:**
 - [ ] Server health check
 - [ ] Database connection test
 - [ ] User registration
 - [ ] User login (get JWT token)
+
+**Data Retrieval:**
 - [ ] Get all brands
 - [ ] Get all categories
 - [ ] Get all items
 - [ ] Get all stocks
+- [ ] Get all room locations
+- [ ] Get all PCs
+
+**CRUD Operations:**
 - [ ] Create new item (authenticated)
 - [ ] Create new stock entry (authenticated)
 - [ ] Create new PC (authenticated)
+- [ ] Create disposal record (authenticated)
+
+**Analytics & Reports:**
 - [ ] Get dashboard analytics (authenticated)
 - [ ] Get category distribution (authenticated)
 - [ ] Get low stock items (admin only)
 - [ ] Get stock by location (admin only)
 - [ ] Get activity logs (authenticated)
-- [ ] Create disposal record (authenticated)
+
+**PC Build Templates:**
+- [ ] Get all templates
+- [ ] Create new template (admin only)
+- [ ] Get template by ID
+- [ ] Update template (admin only)
+- [ ] Duplicate template (admin only)
+- [ ] Compare PC with template
+- [ ] Bulk compare PCs
+- [ ] Apply template to PC (admin only)
+- [ ] Get template statistics
+- [ ] Delete template (admin only)
+
+**Documentation:**
 - [ ] Check Swagger UI documentation
 
 ---
