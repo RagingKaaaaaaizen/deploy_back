@@ -136,6 +136,10 @@ async function initialize() {
     db.ApiCache = require('../comparison/api-cache.model')(sequelize, DataTypes);
     db.ComparisonHistory = require('../comparison/comparison-history.model')(sequelize, DataTypes);
 
+    // PC Build Template Models
+    db.PCBuildTemplate = require('../pc/pc-build-template.model')(sequelize);
+    db.PCBuildTemplateComponent = require('../pc/pc-build-template-component.model')(sequelize);
+
     // ---------------- RELATIONSHIPS ----------------
     // Storage Location -> Stock
     db.StorageLocation.hasMany(db.Stock, { foreignKey: 'locationId', as: 'stocks' });
@@ -237,6 +241,30 @@ async function initialize() {
     // Item -> ComparisonHistory (part2)
     db.Item.hasMany(db.ComparisonHistory, { foreignKey: 'part2Id', as: 'comparisonsAsPart2' });
     db.ComparisonHistory.belongsTo(db.Item, { foreignKey: 'part2Id', as: 'part2' });
+
+    // PC Build Template Relationships
+    // Account -> PCBuildTemplate
+    db.Account.hasMany(db.PCBuildTemplate, { foreignKey: 'createdBy', as: 'userTemplates' });
+    db.PCBuildTemplate.belongsTo(db.Account, { foreignKey: 'createdBy', as: 'creator' });
+
+    // PCBuildTemplate -> PCBuildTemplateComponent
+    db.PCBuildTemplate.hasMany(db.PCBuildTemplateComponent, { 
+        foreignKey: 'templateId', 
+        as: 'components',
+        onDelete: 'CASCADE'
+    });
+    db.PCBuildTemplateComponent.belongsTo(db.PCBuildTemplate, { 
+        foreignKey: 'templateId', 
+        as: 'template' 
+    });
+
+    // Category -> PCBuildTemplateComponent
+    db.Category.hasMany(db.PCBuildTemplateComponent, { foreignKey: 'categoryId', as: 'templateComponents' });
+    db.PCBuildTemplateComponent.belongsTo(db.Category, { foreignKey: 'categoryId', as: 'category' });
+
+    // Item -> PCBuildTemplateComponent
+    db.Item.hasMany(db.PCBuildTemplateComponent, { foreignKey: 'itemId', as: 'templateComponents' });
+    db.PCBuildTemplateComponent.belongsTo(db.Item, { foreignKey: 'itemId', as: 'item' });
 
     // sync all models with database - force: true will drop and recreate all tables
     // Use { force: true } to drop and recreate all tables (WARNING: This will delete all data!)
