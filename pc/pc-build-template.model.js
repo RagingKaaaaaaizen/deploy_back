@@ -69,3 +69,4 @@ function model(sequelize) {
     return sequelize.define('PCBuildTemplate', attributes, options);
 }
 
+

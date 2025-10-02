@@ -12,6 +12,88 @@ const db = require('./_helpers/db');
 const autoMigrate = require('./auto-migrate');
 const ensureUploadsDirectory = require('./ensure-uploads-dir');
 
+// Function to register routes (used by both server startup and testing)
+function registerRoutes() {
+    console.log('🔗 Registering API routes...');
+    
+    // API routes
+    app.use('/api/accounts', require('./accounts/account.controller'));
+    app.use('/api/brands', require('./brand/brand.controller'));
+    app.use('/api/categories', require('./category'));
+    app.use('/api/items', require('./items'));
+    app.use('/api/stocks', require('./stock'));
+    app.use('/api/storage-locations', require('./storage-location'));
+    app.use('/api/pcs', require('./pc'));
+    app.use('/api/pc-components', require('./pc/pc-component.routes'));
+    app.use('/api/room-locations', require('./pc/room-location.routes'));
+    app.use('/api/pc-build-templates', require('./pc/pc-build-template.routes'));
+    app.use('/api/specifications', require('./specifications/specification.controller'));
+    app.use('/api/dispose', require('./dispose'));
+    app.use('/api/activity-logs', require('./activity-log'));
+    app.use('/api/analytics', require('./analytics/analytics.routes'));
+    app.use('/api/approval-requests', require('./approval-requests'));
+
+    // Comparison Feature Routes
+    app.use('/api', require('./comparison'));
+
+    // Swagger docs
+    app.use('/api-docs', require('./_helpers/swagger'));
+
+    // Serve static files from uploads directory
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+    // Health check endpoint for Render
+    app.get('/health', (req, res) => {
+        res.json({ 
+            status: 'OK',
+            timestamp: new Date(),
+            uptime: process.uptime(),
+            environment: process.env.NODE_ENV || 'development'
+        });
+    });
+
+    // Test endpoint without authentication
+    app.get('/api/test', (req, res) => {
+        res.json({ 
+            message: 'Server is working!', 
+            timestamp: new Date(),
+            status: 'OK'
+        });
+    });
+
+    // Test disposal endpoint without authentication
+    app.get('/api/dispose-test', (req, res) => {
+        res.json({ 
+            message: 'Dispose endpoint is working!', 
+            timestamp: new Date(),
+            status: 'OK',
+            endpoint: '/api/dispose-test'
+        });
+    });
+
+    // Test accounts endpoint without authentication
+    app.get('/api/accounts-test', async (req, res) => {
+        try {
+            const accountCount = await db.Account.count();
+            res.json({ 
+                message: 'Accounts endpoint is working!', 
+                timestamp: new Date(),
+                status: 'OK',
+                endpoint: '/api/accounts-test',
+                accountCount: accountCount
+            });
+        } catch (error) {
+            res.status(500).json({ 
+                message: 'Accounts endpoint error', 
+                error: error.message,
+                endpoint: '/api/accounts-test'
+            });
+        }
+    });
+
+    console.log('✅ API routes registered successfully');
+}
+
 // Wait for database initialization before starting server
 async function startServer() {
     try {
@@ -185,5 +267,10 @@ app.get('/api/room-locations-test', async (req, res) => {
     }
 }
 
-// Start the server
-startServer();
+// Export app for testing
+module.exports = app;
+
+// Start the server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
+}
