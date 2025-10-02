@@ -187,7 +187,14 @@ async function update(id, params, userId) {
 // Delete template
 async function _delete(id, userId) {
     const template = await getById(id);
+    const templateName = template.name; // Save name before destroying
 
+    // Delete all associated components first (due to foreign key constraints)
+    await db.PCBuildTemplateComponent.destroy({
+        where: { templateId: id }
+    });
+
+    // Now delete the template
     await template.destroy();
 
     // Log activity
@@ -196,9 +203,11 @@ async function _delete(id, userId) {
         action: 'delete',
         entityType: 'PCBuildTemplate',
         entityId: id,
-        entityName: template.name,
-        details: `Deleted template: ${template.name}`
+        entityName: templateName,
+        details: `Deleted template: ${templateName}`
     });
+
+    return { message: 'Template deleted successfully' };
 }
 
 // Duplicate template

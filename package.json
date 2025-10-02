@@ -6,6 +6,8 @@
     "scripts": {
         "start": "cross-env NODE_ENV=production node ./server.js",
         "start:dev": "cross-env NODE_ENV=development DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost nodemon ./server.js",
+        "test": "cross-env NODE_ENV=test DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost jest --detectOpenHandles --forceExit",
+        "test:templates": "cross-env NODE_ENV=test DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost jest pc/pc-build-template.test.js --detectOpenHandles --forceExit",
         "build": "echo 'No build step required for Node.js'",
         "postinstall": "echo 'Post-install complete'"
     },
@@ -28,7 +30,10 @@
         "yamljs": "^0.3.0"
     },
     "devDependencies": {
+        "axios": "^1.12.2",
         "cross-env": "^10.0.0",
-        "nodemon": "^3.1.9"
+        "jest": "^30.2.0",
+        "nodemon": "^3.1.9",
+        "supertest": "^7.1.4"
     }
 }
