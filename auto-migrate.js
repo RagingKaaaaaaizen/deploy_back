@@ -85,9 +85,84 @@ async function autoMigrate() {
         
         console.log('✅ Auto-migration: Added receiptAttachment column to stocks table');
         
+        // Check and create PC Build Template tables if they don't exist
+        await createPCTemplateTablesIfNeeded();
+        
     } catch (error) {
         console.error('❌ Auto-migration failed:', error.message);
         console.error('   This will not prevent server startup, but the column may need to be added manually');
+        // Don't throw error to prevent server startup failure
+    }
+}
+
+// Function to create PC Build Template tables if they don't exist
+async function createPCTemplateTablesIfNeeded() {
+    try {
+        console.log('🔧 Auto-migration: Checking PC Build Template tables...');
+        
+        // Check if PCBuildTemplates table exists
+        const [templateTables] = await db.sequelize.query(`
+            SELECT TABLE_NAME 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'PCBuildTemplates'
+        `);
+        
+        if (templateTables.length === 0) {
+            console.log('🔧 Creating PCBuildTemplates table...');
+            await db.sequelize.query(`
+                CREATE TABLE PCBuildTemplates (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT NULL,
+                    createdBy INT NULL,
+                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    
+                    INDEX idx_name (name),
+                    INDEX idx_createdBy (createdBy),
+                    INDEX idx_createdAt (createdAt)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+            console.log('✅ Auto-migration: Created PCBuildTemplates table');
+        } else {
+            console.log('✅ Auto-migration: PCBuildTemplates table already exists');
+        }
+        
+        // Check if PCBuildTemplateComponents table exists
+        const [componentTables] = await db.sequelize.query(`
+            SELECT TABLE_NAME 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'PCBuildTemplateComponents'
+        `);
+        
+        if (componentTables.length === 0) {
+            console.log('🔧 Creating PCBuildTemplateComponents table...');
+            await db.sequelize.query(`
+                CREATE TABLE PCBuildTemplateComponents (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    templateId INT NOT NULL,
+                    categoryId INT NOT NULL,
+                    itemId INT NOT NULL,
+                    quantity INT NOT NULL DEFAULT 1,
+                    remarks TEXT NULL,
+                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    
+                    INDEX idx_templateId (templateId),
+                    INDEX idx_categoryId (categoryId),
+                    INDEX idx_itemId (itemId),
+                    UNIQUE KEY unique_template_category (templateId, categoryId)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+            console.log('✅ Auto-migration: Created PCBuildTemplateComponents table');
+        } else {
+            console.log('✅ Auto-migration: PCBuildTemplateComponents table already exists');
+        }
+        
+    } catch (error) {
+        console.error('❌ Auto-migration: Failed to create PC Build Template tables:', error.message);
         // Don't throw error to prevent server startup failure
     }
 }
