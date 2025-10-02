@@ -131,9 +131,27 @@ async function startServer() {
 
 // Allow CORS - Configure for production
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL || 'https://computer-lab-inventory-frontend-d487.onrender.com'
-        : 'http://localhost:4200', // Specific frontend URL for development
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            'https://computer-lab-inventory-frontend-d487.onrender.com',
+            'http://localhost:4200'
+        ];
+        
+        // Add FRONTEND_URL from environment if it exists
+        if (process.env.FRONTEND_URL) {
+            allowedOrigins.push(process.env.FRONTEND_URL);
+        }
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -142,6 +160,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use((req, res, next) => {
     console.log('Request Origin:', req.headers.origin);
+    console.log('Request Method:', req.method);
+    console.log('Request URL:', req.url);
     next();
 });
 
