@@ -7,16 +7,16 @@ const Role = require('../_helpers/role');
 const pcBuildTemplateService = require('./pc-build-template.service');
 
 // Routes
-router.get('/', authorize([Role.Admin, Role.User]), getAll);
-router.get('/:id', authorize([Role.Admin, Role.User]), getById);
-router.post('/', authorize([Role.Admin]), createSchema, create);
-router.put('/:id', authorize([Role.Admin]), updateSchema, update);
-router.delete('/:id', authorize([Role.Admin]), _delete);
-router.post('/:id/duplicate', authorize([Role.Admin]), duplicateSchema, duplicate);
-router.post('/compare/:pcId/:templateId', authorize([Role.Admin, Role.User]), comparePC);
-router.post('/compare-bulk', authorize([Role.Admin, Role.User]), comparePCs);
-router.post('/apply/:pcId/:templateId', authorize([Role.Admin]), applyTemplateSchema, applyTemplate);
-router.get('/:id/stats', authorize([Role.Admin, Role.User]), getStats);
+router.get('/', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getAll);
+router.get('/:id', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getById);
+router.post('/', authorize([Role.SuperAdmin, Role.Admin]), createSchema, create);
+router.put('/:id', authorize([Role.SuperAdmin, Role.Admin]), updateSchema, update);
+router.delete('/:id', authorize([Role.SuperAdmin, Role.Admin]), _delete);
+router.post('/:id/duplicate', authorize([Role.SuperAdmin, Role.Admin]), duplicateSchema, duplicate);
+router.post('/compare/:pcId/:templateId', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), comparePC);
+router.post('/compare-bulk', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), comparePCs);
+router.post('/apply/:pcId/:templateId', authorize([Role.SuperAdmin, Role.Admin]), applyTemplateSchema, applyTemplate);
+router.get('/:id/stats', authorize([Role.SuperAdmin, Role.Admin, Role.Staff, Role.Viewer]), getStats);
 
 module.exports = router;
 
@@ -135,5 +135,6 @@ function applyTemplateSchema(req, res, next) {
     });
     validateRequest(req, next, schema);
 }
+
 
 
