@@ -105,12 +105,13 @@ async function create(params, userId) {
         await transaction.commit();
 
         // Log activity
-        await activityLogService.log({
+        await activityLogService.logActivity({
+            userId: userId,
             action: 'create',
-            entity: 'PCBuildTemplate',
+            entityType: 'PCBuildTemplate',
             entityId: template.id,
-            details: `Created template: ${name}`,
-            userId: userId
+            entityName: name,
+            details: `Created template: ${name}`
         });
 
         // Return template with components
@@ -167,12 +168,13 @@ async function update(id, params, userId) {
         await transaction.commit();
 
         // Log activity
-        await activityLogService.log({
+        await activityLogService.logActivity({
+            userId: userId,
             action: 'update',
-            entity: 'PCBuildTemplate',
+            entityType: 'PCBuildTemplate',
             entityId: id,
-            details: `Updated template: ${template.name}`,
-            userId: userId
+            entityName: template.name,
+            details: `Updated template: ${template.name}`
         });
 
         return await getById(id);
@@ -189,12 +191,13 @@ async function _delete(id, userId) {
     await template.destroy();
 
     // Log activity
-    await activityLogService.log({
+    await activityLogService.logActivity({
+        userId: userId,
         action: 'delete',
-        entity: 'PCBuildTemplate',
+        entityType: 'PCBuildTemplate',
         entityId: id,
-        details: `Deleted template: ${template.name}`,
-        userId: userId
+        entityName: template.name,
+        details: `Deleted template: ${template.name}`
     });
 }
 
@@ -238,12 +241,13 @@ async function duplicate(id, newName, userId) {
         await transaction.commit();
 
         // Log activity
-        await activityLogService.log({
+        await activityLogService.logActivity({
+            userId: userId,
             action: 'create',
-            entity: 'PCBuildTemplate',
+            entityType: 'PCBuildTemplate',
             entityId: newTemplate.id,
-            details: `Duplicated template from: ${originalTemplate.name}`,
-            userId: userId
+            entityName: newName,
+            details: `Duplicated template from: ${originalTemplate.name}`
         });
 
         return await getById(newTemplate.id);
@@ -443,13 +447,13 @@ async function applyTemplateToPC(pcId, templateId, options, userId) {
         await transaction.commit();
 
         // Log activity
-        await activityLogService.log({
-            action: 'apply_template',
-            entity: 'PC',
-            entityId: pcId,
-            details: `Applied template "${template.name}" to PC. Replaced ${replacedComponents.length} components.`,
+        await activityLogService.logActivity({
             userId: userId,
-            metadata: { replacedComponents }
+            action: 'apply_template',
+            entityType: 'PC',
+            entityId: pcId,
+            entityName: `PC ${pcId}`,
+            details: `Applied template "${template.name}" to PC. Replaced ${replacedComponents.length} components.`
         });
 
         return {
