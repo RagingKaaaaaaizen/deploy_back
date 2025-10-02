@@ -3,8 +3,10 @@ services:
     name: computer-lab-inventory-backend
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci --only=production
     startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -32,3 +34,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://computer-lab-inventory-frontend-d487.onrender.com
+      - key: PORT
+        value: 10000

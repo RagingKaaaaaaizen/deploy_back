@@ -4,12 +4,14 @@
     "description": "NodeJS and MySQL API for Email Sign Up with Verification, Authentication & Forgot Password",
     "license": "MIT",
     "scripts": {
-        "start": "cross-env NODE_ENV=production node ./server.js",
+        "start": "node ./server.js",
         "start:dev": "cross-env NODE_ENV=development DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost nodemon ./server.js",
+        "start:prod": "NODE_ENV=production node ./server.js",
         "test": "cross-env NODE_ENV=test DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost jest --detectOpenHandles --forceExit",
         "test:templates": "cross-env NODE_ENV=test DB_USER=root DB_PASSWORD=root DB_NAME=amp DB_HOST=localhost jest pc/pc-build-template.test.js --detectOpenHandles --forceExit",
         "build": "echo 'No build step required for Node.js'",
-        "postinstall": "echo 'Post-install complete'"
+        "postinstall": "echo 'Post-install complete'",
+        "health": "curl -f http://localhost:$PORT/health || exit 1"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
