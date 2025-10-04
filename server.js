@@ -328,6 +328,80 @@ app.get('/api/pc-build-templates-test', async (req, res) => {
     }
 });
 
+// Check stock availability for a template
+app.get('/api/check-template-stock/:templateId', async (req, res) => {
+    try {
+        const templateId = req.params.templateId;
+        
+        // Get template with components
+        const template = await db.PCBuildTemplate.findByPk(templateId, {
+            include: [
+                {
+                    model: db.PCBuildTemplateComponent,
+                    as: 'components',
+                    include: [
+                        { model: db.Category, as: 'category' },
+                        { model: db.Item, as: 'item' }
+                    ]
+                }
+            ]
+        });
+        
+        if (!template) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Template not found' 
+            });
+        }
+        
+        // Check stock for each component
+        const stockChecks = [];
+        for (const component of template.components) {
+            const stocks = await db.Stock.findAll({
+                where: { itemId: component.itemId },
+                order: [['createdAt', 'DESC']]
+            });
+            
+            let totalAvailable = 0;
+            for (const stock of stocks) {
+                if (stock.quantity > 0) {
+                    totalAvailable += stock.quantity;
+                }
+            }
+            
+            stockChecks.push({
+                categoryId: component.categoryId,
+                categoryName: component.category.name,
+                itemId: component.itemId,
+                itemName: component.item.name,
+                requiredQuantity: component.quantity,
+                availableQuantity: totalAvailable,
+                sufficient: totalAvailable >= component.quantity
+            });
+        }
+        
+        const allSufficient = stockChecks.every(check => check.sufficient);
+        
+        res.json({
+            success: true,
+            templateId: templateId,
+            templateName: template.name,
+            allComponentsSufficient: allSufficient,
+            stockChecks: stockChecks,
+            timestamp: new Date()
+        });
+        
+    } catch (error) {
+        console.error('❌ Error checking template stock:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error checking template stock',
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
 // TEMPORARY: Create PC Build Template tables manually
 app.get('/api/create-pc-tables', async (req, res) => {
     try {
