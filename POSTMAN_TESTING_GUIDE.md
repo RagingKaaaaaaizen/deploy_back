@@ -105,7 +105,7 @@ The auto-migration should create them automatically. If not:
     "PCBuildTemplateComponent": true
   },
   "timestamp": "2024-01-02T...",
-  "status": "OK"
+    "status": "OK"
 }
 ```
 
@@ -117,7 +117,7 @@ The auto-migration should create them automatically. If not:
 ### Create Template Response:
 ```json
 {
-  "id": 1,
+    "id": 1,
   "name": "Gaming PC Template",
   "description": "High-performance gaming PC configuration",
   "createdBy": 1,

@@ -328,6 +328,74 @@ app.get('/api/pc-build-templates-test', async (req, res) => {
     }
 });
 
+// TEMPORARY: Create PC Build Template tables manually
+app.get('/api/create-pc-tables', async (req, res) => {
+    try {
+        console.log('🔧 Creating PC Build Template tables manually...');
+        
+        // Create PCBuildTemplates table
+        await db.sequelize.query(`
+            CREATE TABLE IF NOT EXISTS PCBuildTemplates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT NULL,
+                createdBy INT NULL,
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                
+                INDEX idx_name (name),
+                INDEX idx_createdBy (createdBy),
+                INDEX idx_createdAt (createdAt)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        
+        // Create PCBuildTemplateComponents table
+        await db.sequelize.query(`
+            CREATE TABLE IF NOT EXISTS PCBuildTemplateComponents (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                templateId INT NOT NULL,
+                categoryId INT NOT NULL,
+                itemId INT NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                remarks TEXT NULL,
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                
+                INDEX idx_templateId (templateId),
+                INDEX idx_categoryId (categoryId),
+                INDEX idx_itemId (itemId),
+                UNIQUE KEY unique_template_category (templateId, categoryId)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        
+        // Verify tables were created
+        const [tables] = await db.sequelize.query(`
+            SELECT TABLE_NAME 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME IN ('PCBuildTemplates', 'PCBuildTemplateComponents')
+        `);
+        
+        console.log('✅ PC Build Template tables created successfully!');
+        
+        res.json({ 
+            success: true, 
+            message: 'PC Build Template tables created successfully',
+            tablesCreated: tables.length,
+            tables: tables.map(t => t.TABLE_NAME),
+            timestamp: new Date()
+        });
+    } catch (error) {
+        console.error('❌ Error creating PC Build Template tables:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error creating tables',
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
         // Global error handler
         app.use(errorHandler);
 
