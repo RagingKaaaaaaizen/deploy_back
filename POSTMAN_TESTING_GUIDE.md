@@ -1,586 +1,136 @@
-# Postman Testing Guide for Computer Lab Inventory Management System
+# Postman Testing Guide for PC Build Templates
 
-## 🚀 Getting Started
+## 🚀 Quick Setup
 
-### 1. Start the Server
+### 1. Import the Collection
+1. Open Postman
+2. Click "Import" button
+3. Select the file: `PC_Build_Template_Postman_Collection.json`
+4. The collection will be imported with all test endpoints
+
+### 2. Set Environment Variables
+1. In Postman, create a new environment called "Local Development"
+2. Add these variables:
+   - `baseUrl`: `http://localhost:4000`
+   - `authToken`: (leave empty for now)
+
+### 3. Start Your Backend
 ```bash
-cd C:/Users/Lenovo/Documents/testing/deploy_back
+cd deploy_back
 npm run start:dev
 ```
 
-The server will run on: `http://localhost:4000`
+## 🧪 Testing Steps (Run in Order)
 
-### 2. Open Postman
-- Download Postman if you haven't already
-- Create a new workspace called "Computer Lab Inventory API"
+### Step 1: Basic Health Checks
+1. **Health Check** - Should return `{"status": "OK"}`
+2. **Test Endpoint** - Should return `{"message": "Server is working!"}`
 
----
+### Step 2: Diagnostic Test
+3. **PC Build Template Diagnostic** - This is the most important test!
+   - Should return information about tables and models
+   - Look for `"tablesExist": 2` and `"tables": ["PCBuildTemplates", "PCBuildTemplateComponents"]`
 
-## 🔧 Basic Health Checks
+### Step 3: Get Data for Testing
+4. **Get Categories** - Get category IDs for template creation
+5. **Get Items** - Get item IDs for template creation
 
-### Test 1: Server Health Check
-**Method:** `GET`  
-**URL:** `http://localhost:4000/health`  
-**Headers:** None required  
-**Expected Response:**
+### Step 4: Authentication (Optional)
+6. **Login** - Get auth token for protected endpoints
+   - Copy the `jwtToken` from response
+   - Update the `authToken` environment variable
+
+### Step 5: Test PC Build Templates
+7. **Get All PC Build Templates** - Should return `[]` (empty array)
+8. **Create PC Build Template** - Create a test template
+9. **Get Template by ID** - Retrieve the created template
+10. **Update Template** - Modify the template
+11. **Delete Template** - Clean up
+
+## 🔍 What to Look For
+
+### ✅ Success Indicators
+- Diagnostic endpoint shows `"tablesExist": 2`
+- PC Build Templates endpoint returns `[]` (empty array)
+- Creating templates works without errors
+- All CRUD operations work
+
+### ❌ Error Indicators
+- Diagnostic endpoint shows `"tablesExist": 0`
+- PC Build Templates endpoint returns 500 error
+- "Table doesn't exist" errors
+
+## 🛠️ Troubleshooting
+
+### If Tables Don't Exist
+The auto-migration should create them automatically. If not:
+
+1. Check your backend console for auto-migration messages
+2. Look for error messages in the console
+3. Try restarting the backend server
+
+### If You Get 500 Errors
+1. Check the Response tab in Postman for detailed error messages
+2. Check your backend console for error logs
+3. Verify your database connection
+
+### If Authentication Fails
+1. Make sure you have an admin account in your database
+2. Try the default credentials: `admin@example.com` / `admin123`
+3. Check if the accounts table has data
+
+## 📝 Sample Test Data
+
+### Categories (should exist in your database):
+- ID 1: Central Processing Unit (CPU)
+- ID 2: Graphics Processing Unit (GPU)
+- ID 3: Random Access Memory (RAM)
+
+### Items (should exist in your database):
+- ID 1: Intel Core i7-12700K
+- ID 3: NVIDIA GeForce RTX 3070
+- ID 5: Samsung DDR4 16GB
+
+## 🎯 Expected Results
+
+### Diagnostic Endpoint Response:
 ```json
 {
-    "status": "OK",
-    "timestamp": "2024-01-15T10:30:00.000Z",
-    "uptime": 123.456,
-    "environment": "development"
+  "message": "PC Build Template test endpoint",
+  "templateCount": 0,
+  "tablesExist": 2,
+  "tables": ["PCBuildTemplates", "PCBuildTemplateComponents"],
+  "modelsAvailable": {
+    "PCBuildTemplate": true,
+    "PCBuildTemplateComponent": true
+  },
+  "timestamp": "2024-01-02T...",
+  "status": "OK"
 }
 ```
 
-### Test 2: API Test Endpoint
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/test`  
-**Headers:** None required  
-**Expected Response:**
+### Get All Templates Response:
+```json
+[]
+```
+
+### Create Template Response:
 ```json
 {
-    "message": "Server is working!",
-    "timestamp": "2024-01-15T10:30:00.000Z",
-    "status": "OK"
+  "id": 1,
+  "name": "Gaming PC Template",
+  "description": "High-performance gaming PC configuration",
+  "createdBy": 1,
+  "createdAt": "2024-01-02T...",
+  "updatedAt": "2024-01-02T...",
+  "components": [...]
 }
 ```
 
-### Test 3: Database Connection Test
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/accounts-test`  
-**Headers:** None required  
-**Expected Response:**
-```json
-{
-    "message": "Accounts test endpoint",
-    "accountCount": 4,
-    "timestamp": "2024-01-15T10:30:00.000Z",
-    "status": "OK"
-}
-```
-
----
-
-## 🔐 Authentication Testing
-
-### Test 4: User Registration
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/accounts/register`  
-**Headers:** `Content-Type: application/json`  
-**Body (JSON):**
-```json
-{
-    "title": "Mr.",
-    "firstName": "Test",
-    "lastName": "User",
-    "email": "test@example.com",
-    "password": "password123",
-    "confirmPassword": "password123",
-    "acceptTerms": true
-}
-```
-
-### Test 5: User Login
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/accounts/authenticate`  
-**Headers:** `Content-Type: application/json`  
-**Body (JSON):**
-```json
-{
-    "email": "admin@example.com",
-    "password": "admin123"
-}
-```
-
-**Expected Response:**
-```json
-{
-    "id": 1,
-    "title": "Mr.",
-    "firstName": "Admin",
-    "lastName": "User",
-    "email": "admin@example.com",
-    "role": "SuperAdmin",
-    "status": "Active",
-    "isVerified": true,
-    "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "refresh_token_here"
-}
-```
-
-**Save the `jwtToken` for authenticated requests!**
-
----
-
-## 📊 Data Retrieval Testing
-
-### Test 6: Get All Brands
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/brands`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Expected Response:**
-```json
-[
-    {
-        "id": 1,
-        "name": "Intel",
-        "description": "Intel Corporation - CPU and chipset manufacturer"
-    },
-    {
-        "id": 2,
-        "name": "AMD",
-        "description": "Advanced Micro Devices - CPU and GPU manufacturer"
-    }
-]
-```
-
-### Test 7: Get All Categories
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/categories`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 8: Get All Items
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/items`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 9: Get All Stocks
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/stocks`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 10: Get All Storage Locations
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/storage-locations`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 11: Get All Room Locations
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/room-locations`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 12: Get All PCs
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/pcs`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
----
-
-## 🔒 Authenticated Requests
-
-**For all authenticated requests, add this header:**
-```
-Authorization: Bearer YOUR_JWT_TOKEN_HERE
-```
-
-### Test 13: Create New Item (Authenticated)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/items`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "categoryId": 1,
-    "brandId": 1,
-    "name": "Intel Core i9-13900K",
-    "description": "13th Gen Intel Core i9 processor",
-    "brandName": "Intel"
-}
-```
-
-### Test 14: Create New Stock Entry (Authenticated)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/stocks`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "itemId": 1,
-    "quantity": 10,
-    "locationId": 1,
-    "price": 399.99,
-    "totalPrice": 3999.90,
-    "remarks": "New stock for lab expansion"
-}
-```
-
-### Test 15: Create New PC (Authenticated)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/pcs`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "name": "Test Gaming PC",
-    "serialNumber": "PC-TEST-001",
-    "roomLocationId": 1,
-    "status": "Active",
-    "assignedTo": "Test Lab",
-    "notes": "Test PC for API testing"
-}
-```
-
----
-
-## 📈 Advanced Testing
-
-### Test 16: Get Dashboard Analytics
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/analytics/dashboard`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 17: Get Category Distribution
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/analytics/category-distribution`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 18: Get Low Stock Items (Admin Only)
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/analytics/low-stock-items`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 19: Get Stock by Location (Admin Only)
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/analytics/stock-by-location`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 20: Get Activity Logs
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/activity-logs`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 21: Get Approval Requests
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/approval-requests`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-
-### Test 22: Create Disposal Record (Authenticated)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/dispose`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "stockEntryId": 1,
-    "quantity": 2,
-    "disposalValue": 20.00,
-    "locationId": 1,
-    "reason": "Old hard drives no longer needed"
-}
-```
-
-**Note:** You need to use a valid `stockEntryId` from your stocks. First get your stocks with `GET /api/stocks` to see available stock entry IDs.
-
----
-
-## 🖥️ PC Build Template Testing
-
-### Test 23: Get All Templates
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/pc-build-templates`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Expected Response:**
-```json
-[
-    {
-        "id": 1,
-        "name": "Office Standard 2025",
-        "description": "Standard office PC configuration",
-        "components": [
-            {
-                "id": 1,
-                "categoryId": 1,
-                "itemId": 5,
-                "quantity": 1,
-                "category": { "id": 1, "name": "CPU" },
-                "item": { "id": 5, "name": "Intel Core i5-12400" }
-            }
-        ],
-        "createdAt": "2025-01-15T10:30:00.000Z"
-    }
-]
-```
-
-### Test 24: Create New Template (Admin Only)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/pc-build-templates`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "name": "Gaming PC Standard",
-    "description": "Standard gaming PC configuration for computer lab",
-    "components": [
-        {
-            "categoryId": 1,
-            "itemId": 10,
-            "quantity": 1,
-            "remarks": "High-performance CPU"
-        },
-        {
-            "categoryId": 3,
-            "itemId": 15,
-            "quantity": 2,
-            "remarks": "16GB RAM (2x8GB)"
-        }
-    ]
-}
-```
-
-### Test 25: Get Template by ID
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/pc-build-templates/1`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`
-
-### Test 26: Update Template (Admin Only)
-**Method:** `PUT`  
-**URL:** `http://localhost:4000/api/pc-build-templates/1`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "name": "Office Standard 2025 - Updated",
-    "description": "Updated office configuration",
-    "components": [
-        {
-            "categoryId": 1,
-            "itemId": 8,
-            "quantity": 1
-        }
-    ]
-}
-```
-
-### Test 27: Duplicate Template (Admin Only)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/pc-build-templates/1/duplicate`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "newName": "Gaming PC Standard (Copy)"
-}
-```
-
-### Test 28: Compare PC with Template
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/pc-build-templates/compare/1/1`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Expected Response:**
-```json
-{
-    "pcId": 1,
-    "templateId": 1,
-    "templateName": "Office Standard 2025",
-    "totalComponents": 5,
-    "matchCount": 3,
-    "mismatchCount": 2,
-    "matches": false,
-    "matchPercentage": 60,
-    "mismatches": [
-        {
-            "categoryId": 2,
-            "categoryName": "GPU",
-            "reason": "missing",
-            "template": {
-                "itemId": 12,
-                "itemName": "NVIDIA GTX 1650",
-                "quantity": 1
-            },
-            "actual": null,
-            "suggestedAction": "Add component to PC"
-        }
-    ]
-}
-```
-
-### Test 29: Bulk Compare PCs
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/pc-build-templates/compare-bulk`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "pcIds": [1, 2, 3],
-    "templateId": 1
-}
-```
-
-### Test 30: Apply Template to PC (Admin Only)
-**Method:** `POST`  
-**URL:** `http://localhost:4000/api/pc-build-templates/apply/1/1`  
-**Headers:** 
-- `Content-Type: application/json`
-- `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Body (JSON):**
-```json
-{
-    "options": {
-        "replaceAll": false,
-        "replaceCategories": [2, 3]
-    }
-}
-```
-**Expected Response:**
-```json
-{
-    "success": true,
-    "replacedCount": 2,
-    "replacedComponents": [
-        {
-            "categoryName": "GPU",
-            "oldItem": "None",
-            "newItem": "NVIDIA GTX 1650",
-            "quantity": 1
-        }
-    ]
-}
-```
-
-### Test 31: Get Template Statistics
-**Method:** `GET`  
-**URL:** `http://localhost:4000/api/pc-build-templates/1/stats`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Expected Response:**
-```json
-{
-    "templateId": 1,
-    "templateName": "Office Standard 2025",
-    "totalPCs": 10,
-    "matchingPCs": 6,
-    "partialMatchPCs": 3,
-    "nonMatchingPCs": 1,
-    "complianceRate": 60
-}
-```
-
-### Test 32: Delete Template (Admin Only)
-**Method:** `DELETE`  
-**URL:** `http://localhost:4000/api/pc-build-templates/1`  
-**Headers:** `Authorization: Bearer YOUR_JWT_TOKEN_HERE`  
-**Expected Response:**
-```json
-{
-    "message": "Template deleted successfully"
-}
-```
-
----
-
-## 🔍 API Documentation
-
-### Swagger UI
-Visit: `http://localhost:4000/api-docs`
-
-This provides interactive API documentation where you can test endpoints directly in the browser.
-
----
-
-## 📝 Sample Data Available
-
-The database now contains:
-
-- **4 User Accounts:**
-  - Admin: `admin@lab.com` / `password`
-  - Manager: `manager@lab.com` / `password`
-  - Technician: `tech@lab.com` / `password`
-  - Viewer: `viewer@lab.com` / `password`
-
-- **15 Brands:** Intel, AMD, NVIDIA, Samsung, etc.
-- **14 Categories:** CPU, GPU, RAM, Storage, etc.
-- **15 Items:** Various computer components
-- **15 Stock Entries:** Inventory with quantities and prices
-- **5 Room Locations:** Computer lab areas
-- **2 Assembled PCs:** With components
-- **Sample Activity Logs:** System activity records
-- **Sample Approval Requests:** Workflow examples
-
----
-
-## 🚨 Troubleshooting
-
-### Common Issues:
-
-1. **401 Unauthorized:** Missing or invalid JWT token
-2. **500 Internal Server Error:** Database connection issues
-3. **404 Not Found:** Wrong endpoint URL
-4. **CORS Error:** Frontend origin not allowed
-
-### Quick Fixes:
-
-1. **Check server is running:** `http://localhost:4000/health`
-2. **Verify database connection:** `http://localhost:4000/api/accounts-test`
-3. **Check JWT token:** Make sure it's valid and not expired
-4. **Check endpoint URLs:** Ensure they match the server routes
-
----
-
-## 🎯 Testing Checklist
-
-**Basic Tests:**
-- [ ] Server health check
-- [ ] Database connection test
-- [ ] User registration
-- [ ] User login (get JWT token)
-
-**Data Retrieval:**
-- [ ] Get all brands
-- [ ] Get all categories
-- [ ] Get all items
-- [ ] Get all stocks
-- [ ] Get all room locations
-- [ ] Get all PCs
-
-**CRUD Operations:**
-- [ ] Create new item (authenticated)
-- [ ] Create new stock entry (authenticated)
-- [ ] Create new PC (authenticated)
-- [ ] Create disposal record (authenticated)
-
-**Analytics & Reports:**
-- [ ] Get dashboard analytics (authenticated)
-- [ ] Get category distribution (authenticated)
-- [ ] Get low stock items (admin only)
-- [ ] Get stock by location (admin only)
-- [ ] Get activity logs (authenticated)
-
-**PC Build Templates:**
-- [ ] Get all templates
-- [ ] Create new template (admin only)
-- [ ] Get template by ID
-- [ ] Update template (admin only)
-- [ ] Duplicate template (admin only)
-- [ ] Compare PC with template
-- [ ] Bulk compare PCs
-- [ ] Apply template to PC (admin only)
-- [ ] Get template statistics
-- [ ] Delete template (admin only)
-
-**Documentation:**
-- [ ] Check Swagger UI documentation
-
----
-
-## 📞 Support
-
-If you encounter issues:
-1. Check the server console for error messages
-2. Verify database connection
-3. Check JWT token validity
-4. Review the Swagger documentation at `/api-docs`
+## 🚀 Next Steps
+
+Once local testing works:
+1. Commit your changes
+2. Push to repository
+3. Deploy to Render
+4. Test the same endpoints on production URLs

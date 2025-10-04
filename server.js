@@ -275,6 +275,59 @@ app.get('/api/room-locations-test', async (req, res) => {
     }
 });
 
+// Test PC Build Template endpoint without authentication
+app.get('/api/pc-build-templates-test', async (req, res) => {
+    try {
+        console.log('🔍 Testing PC Build Template endpoint');
+        console.log('🔍 db.PCBuildTemplate available:', !!db.PCBuildTemplate);
+        console.log('🔍 db.PCBuildTemplateComponent available:', !!db.PCBuildTemplateComponent);
+        
+        if (!db.PCBuildTemplate) {
+            return res.status(500).json({ 
+                message: 'PCBuildTemplate model not available', 
+                timestamp: new Date()
+            });
+        }
+        
+        if (!db.PCBuildTemplateComponent) {
+            return res.status(500).json({ 
+                message: 'PCBuildTemplateComponent model not available', 
+                timestamp: new Date()
+            });
+        }
+        
+        // Check if tables exist
+        const [templateTables] = await db.sequelize.query(`
+            SELECT TABLE_NAME 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME IN ('PCBuildTemplates', 'PCBuildTemplateComponents')
+        `);
+        
+        const templateCount = await db.PCBuildTemplate.count();
+        
+        res.json({ 
+            message: 'PC Build Template test endpoint', 
+            templateCount: templateCount,
+            tablesExist: templateTables.length,
+            tables: templateTables.map(t => t.TABLE_NAME),
+            modelsAvailable: {
+                PCBuildTemplate: !!db.PCBuildTemplate,
+                PCBuildTemplateComponent: !!db.PCBuildTemplateComponent
+            },
+            timestamp: new Date(),
+            status: 'OK'
+        });
+    } catch (error) {
+        console.error('PC Build Template test error:', error);
+        res.status(500).json({ 
+            message: 'Database error', 
+            error: error.message,
+            timestamp: new Date()
+        });
+    }
+});
+
         // Global error handler
         app.use(errorHandler);
 

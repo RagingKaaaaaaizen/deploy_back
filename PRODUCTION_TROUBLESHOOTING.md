@@ -205,3 +205,6 @@ The most common issue is the **backend server sleeping** on Render's free tier. 
 1. Using a keep-alive service
 2. Upgrading to Render's paid tier
 3. Implementing proper error handling for slow responses
+
+
+
