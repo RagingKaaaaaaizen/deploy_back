@@ -35,4 +35,16 @@ router.post('/generate-report', analyticsController.generateReport);
 // Test database connectivity - available to all authenticated users
 router.get('/test-database', analyticsController.testDatabase);
 
+// Enhanced Analytics Routes - available to admin and super admin
+router.get('/top-categories', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getTopUsedCategories);
+router.get('/most-replaced-components', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getMostReplacedComponents);
+router.get('/average-lifespan', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getAverageComponentLifespan);
+router.get('/replacement-patterns', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getComponentReplacementPatterns);
+router.get('/advanced-analytics', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getAdvancedAnalytics);
+router.get('/pending-requests', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getPendingRequests);
+
+// Automated report scheduling - available to super admin only
+router.get('/automated-schedule', authorize([Role.SuperAdmin]), analyticsController.getAutomatedReportSchedule);
+router.post('/automated-schedule', authorize([Role.SuperAdmin]), analyticsController.setAutomatedReportSchedule);
+
 module.exports = router;

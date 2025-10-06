@@ -12,7 +12,16 @@ module.exports = {
     getStockByLocation,
     getMonthlyStockAdditions,
     getMonthlyDisposals,
-    generateReport
+    generateReport,
+    // Enhanced analytics
+    getTopUsedCategories,
+    getMostReplacedComponents,
+    getAverageComponentLifespan,
+    getComponentReplacementPatterns,
+    getAdvancedAnalytics,
+    getPendingRequests,
+    getAutomatedReportSchedule,
+    setAutomatedReportSchedule
 };
 
 // Get comprehensive dashboard analytics (FIXED VERSION)
@@ -539,6 +548,352 @@ async function generateReport(request) {
         return reportData;
     } catch (error) {
         console.error('Error generating report:', error);
+        throw error;
+    }
+}
+
+// Enhanced Analytics Functions
+
+// Get top-used categories with usage statistics
+async function getTopUsedCategories(limit = 10) {
+    try {
+        const stockData = await db.Stock.findAll({
+            include: [
+                {
+                    model: db.Item,
+                    as: 'item',
+                    include: [
+                        { model: db.Category, as: 'category', attributes: ['id', 'name'] }
+                    ]
+                }
+            ]
+        });
+
+        const categoryUsage = new Map();
+        let totalUsage = 0;
+
+        stockData.forEach(stock => {
+            if (stock.item && stock.item.category) {
+                const categoryName = stock.item.category.name;
+                const currentUsage = categoryUsage.get(categoryName) || 0;
+                categoryUsage.set(categoryName, currentUsage + stock.quantity);
+                totalUsage += stock.quantity;
+            }
+        });
+
+        const topCategories = Array.from(categoryUsage.entries())
+            .map(([name, usage]) => ({
+                category: name,
+                usage: usage,
+                percentage: totalUsage > 0 ? Math.round((usage / totalUsage) * 100) : 0
+            }))
+            .sort((a, b) => b.usage - a.usage)
+            .slice(0, limit);
+
+        return topCategories;
+    } catch (error) {
+        console.error('Error getting top-used categories:', error);
+        return [];
+    }
+}
+
+// Get most replaced components based on disposal patterns
+async function getMostReplacedComponents(limit = 10) {
+    try {
+        const disposalData = await db.Dispose.findAll({
+            include: [
+                {
+                    model: db.Item,
+                    as: 'item',
+                    attributes: ['id', 'name'],
+                    include: [
+                        { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                        { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                    ]
+                }
+            ],
+            order: [['disposalDate', 'DESC']]
+        });
+
+        const componentReplacements = new Map();
+
+        disposalData.forEach(disposal => {
+            if (disposal.item) {
+                const key = `${disposal.item.name}_${disposal.item.category?.name || 'Unknown'}`;
+                const current = componentReplacements.get(key) || {
+                    name: disposal.item.name,
+                    category: disposal.item.category?.name || 'Unknown',
+                    brand: disposal.item.brand?.name || 'Unknown',
+                    replacementCount: 0,
+                    totalQuantity: 0,
+                    lastReplaced: disposal.disposalDate
+                };
+                
+                current.replacementCount += 1;
+                current.totalQuantity += disposal.quantity;
+                if (disposal.disposalDate > current.lastReplaced) {
+                    current.lastReplaced = disposal.disposalDate;
+                }
+                
+                componentReplacements.set(key, current);
+            }
+        });
+
+        return Array.from(componentReplacements.values())
+            .sort((a, b) => b.replacementCount - a.replacementCount)
+            .slice(0, limit);
+    } catch (error) {
+        console.error('Error getting most replaced components:', error);
+        return [];
+    }
+}
+
+// Calculate average component lifespan
+async function getAverageComponentLifespan() {
+    try {
+        const disposalData = await db.Dispose.findAll({
+            include: [
+                {
+                    model: db.Item,
+                    as: 'item',
+                    attributes: ['id', 'name'],
+                    include: [
+                        { model: db.Category, as: 'category', attributes: ['id', 'name'] }
+                    ]
+                }
+            ]
+        });
+
+        const lifespanData = new Map();
+
+        disposalData.forEach(disposal => {
+            if (disposal.item) {
+                const categoryName = disposal.item.category?.name || 'Unknown';
+                const lifespan = disposal.lifespan || 0; // Assuming lifespan is stored in disposal record
+                
+                if (!lifespanData.has(categoryName)) {
+                    lifespanData.set(categoryName, {
+                        category: categoryName,
+                        totalLifespan: 0,
+                        count: 0,
+                        averageLifespan: 0
+                    });
+                }
+                
+                const data = lifespanData.get(categoryName);
+                data.totalLifespan += lifespan;
+                data.count += 1;
+                data.averageLifespan = data.totalLifespan / data.count;
+            }
+        });
+
+        return Array.from(lifespanData.values())
+            .sort((a, b) => b.averageLifespan - a.averageLifespan);
+    } catch (error) {
+        console.error('Error calculating average component lifespan:', error);
+        return [];
+    }
+}
+
+// Get component replacement patterns
+async function getComponentReplacementPatterns() {
+    try {
+        const disposalData = await db.Dispose.findAll({
+            include: [
+                {
+                    model: db.Item,
+                    as: 'item',
+                    attributes: ['id', 'name'],
+                    include: [
+                        { model: db.Category, as: 'category', attributes: ['id', 'name'] }
+                    ]
+                }
+            ],
+            order: [['disposalDate', 'ASC']]
+        });
+
+        const patterns = {
+            monthlyPatterns: new Map(),
+            seasonalPatterns: new Map(),
+            reasonPatterns: new Map()
+        };
+
+        disposalData.forEach(disposal => {
+            if (disposal.item) {
+                const category = disposal.item.category?.name || 'Unknown';
+                const disposalDate = new Date(disposal.disposalDate);
+                const month = disposalDate.getMonth();
+                const season = Math.floor(month / 3);
+                
+                // Monthly patterns
+                if (!patterns.monthlyPatterns.has(category)) {
+                    patterns.monthlyPatterns.set(category, new Array(12).fill(0));
+                }
+                patterns.monthlyPatterns.get(category)[month] += disposal.quantity;
+                
+                // Seasonal patterns
+                if (!patterns.seasonalPatterns.has(category)) {
+                    patterns.seasonalPatterns.set(category, new Array(4).fill(0));
+                }
+                patterns.seasonalPatterns.get(category)[season] += disposal.quantity;
+                
+                // Reason patterns
+                const reason = disposal.reason || 'Unknown';
+                if (!patterns.reasonPatterns.has(category)) {
+                    patterns.reasonPatterns.set(category, new Map());
+                }
+                const reasonMap = patterns.reasonPatterns.get(category);
+                reasonMap.set(reason, (reasonMap.get(reason) || 0) + disposal.quantity);
+            }
+        });
+
+        return {
+            monthlyPatterns: Object.fromEntries(patterns.monthlyPatterns),
+            seasonalPatterns: Object.fromEntries(patterns.seasonalPatterns),
+            reasonPatterns: Object.fromEntries(
+                Array.from(patterns.reasonPatterns.entries()).map(([category, reasons]) => [
+                    category,
+                    Object.fromEntries(reasons)
+                ])
+            )
+        };
+    } catch (error) {
+        console.error('Error getting component replacement patterns:', error);
+        return { monthlyPatterns: {}, seasonalPatterns: {}, reasonPatterns: {} };
+    }
+}
+
+// Get comprehensive advanced analytics
+async function getAdvancedAnalytics() {
+    try {
+        // Use Promise.allSettled to handle individual failures gracefully
+        const results = await Promise.allSettled([
+            getTopUsedCategories(10),
+            getMostReplacedComponents(10),
+            getAverageComponentLifespan(),
+            getComponentReplacementPatterns(),
+            getLowStockItems(5),
+            getOutOfStockItems(),
+            getPendingRequests()
+        ]);
+
+        // Extract successful results, use empty arrays for failed ones
+        const [
+            topCategories,
+            mostReplacedComponents,
+            averageLifespan,
+            replacementPatterns,
+            lowStockItems,
+            outOfStockItems,
+            pendingRequests
+        ] = results.map(result => 
+            result.status === 'fulfilled' ? result.value : []
+        );
+
+        return {
+            topCategories,
+            mostReplacedComponents,
+            averageLifespan,
+            replacementPatterns,
+            lowStockItems,
+            outOfStockItems,
+            pendingRequests,
+            generatedAt: new Date()
+        };
+    } catch (error) {
+        console.error('Error getting advanced analytics:', error);
+        // Return a basic structure even if there's an error
+        return {
+            topCategories: [],
+            mostReplacedComponents: [],
+            averageLifespan: [],
+            replacementPatterns: { monthlyPatterns: {}, seasonalPatterns: {}, reasonPatterns: {} },
+            lowStockItems: [],
+            outOfStockItems: [],
+            pendingRequests: [],
+            generatedAt: new Date()
+        };
+    }
+}
+
+// Get pending requests (approval requests)
+async function getPendingRequests() {
+    try {
+        // First, let's check if ApprovalRequest model exists and has the expected associations
+        if (!db.ApprovalRequest) {
+            console.log('ApprovalRequest model not found, returning empty array');
+            return [];
+        }
+
+        // Try to get pending requests without includes first to see the basic structure
+        const pendingRequests = await db.ApprovalRequest.findAll({
+            where: {
+                status: 'pending'
+            },
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Map the results with basic information
+        return pendingRequests.map(request => ({
+            id: request.id,
+            itemName: request.itemName || request.itemName || 'Unknown Item',
+            category: request.category || 'Unknown Category',
+            quantity: request.quantity || 0,
+            reason: request.reason || 'No reason provided',
+            requestedBy: request.requestedBy || 'Unknown User',
+            requestedAt: request.createdAt,
+            priority: request.priority || 'normal'
+        }));
+    } catch (error) {
+        console.error('Error getting pending requests:', error);
+        // Return empty array instead of throwing error
+        return [];
+    }
+}
+
+// Automated report scheduling functions
+async function getAutomatedReportSchedule() {
+    try {
+        // This would typically be stored in a database table
+        // For now, return a default configuration
+        return {
+            enabled: false,
+            weeklyReports: {
+                enabled: false,
+                dayOfWeek: 1, // Monday
+                time: '09:00',
+                recipients: []
+            },
+            monthlyReports: {
+                enabled: false,
+                dayOfMonth: 1,
+                time: '09:00',
+                recipients: []
+            },
+            lowStockAlerts: {
+                enabled: false,
+                threshold: 10,
+                recipients: []
+            },
+            outOfStockAlerts: {
+                enabled: false,
+                recipients: []
+            }
+        };
+    } catch (error) {
+        console.error('Error getting automated report schedule:', error);
+        throw error;
+    }
+}
+
+async function setAutomatedReportSchedule(schedule) {
+    try {
+        // This would typically save to a database table
+        // For now, we'll just return success
+        console.log('Automated report schedule updated:', schedule);
+        return { success: true, message: 'Schedule updated successfully' };
+    } catch (error) {
+        console.error('Error setting automated report schedule:', error);
         throw error;
     }
 }

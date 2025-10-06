@@ -138,3 +138,64 @@ exports.testDatabase = (req, res, next) => {
             });
         });
 };
+
+// Enhanced Analytics Controllers
+
+// GET top-used categories
+exports.getTopUsedCategories = (req, res, next) => {
+    const limit = parseInt(req.query.limit) || 10;
+    analyticsService.getTopUsedCategories(limit)
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// GET most replaced components
+exports.getMostReplacedComponents = (req, res, next) => {
+    const limit = parseInt(req.query.limit) || 10;
+    analyticsService.getMostReplacedComponents(limit)
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// GET average component lifespan
+exports.getAverageComponentLifespan = (req, res, next) => {
+    analyticsService.getAverageComponentLifespan()
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// GET component replacement patterns
+exports.getComponentReplacementPatterns = (req, res, next) => {
+    analyticsService.getComponentReplacementPatterns()
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// GET comprehensive advanced analytics
+exports.getAdvancedAnalytics = (req, res, next) => {
+    analyticsService.getAdvancedAnalytics()
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// GET pending requests
+exports.getPendingRequests = (req, res, next) => {
+    analyticsService.getPendingRequests()
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// GET automated report schedule
+exports.getAutomatedReportSchedule = (req, res, next) => {
+    analyticsService.getAutomatedReportSchedule()
+        .then(data => res.json(data))
+        .catch(next);
+};
+
+// POST set automated report schedule
+exports.setAutomatedReportSchedule = (req, res, next) => {
+    const schedule = req.body;
+    analyticsService.setAutomatedReportSchedule(schedule)
+        .then(data => res.json(data))
+        .catch(next);
+};
