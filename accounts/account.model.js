@@ -32,6 +32,7 @@ function model(sequelize) {
             allowNull: false,
             defaultValue: 'Active'
         },
+        lastLogin: { type: DataTypes.DATE, allowNull: true },
         isVerified: {
             type: DataTypes.VIRTUAL,
             get() { return !!(this.verified || this.passwordReset); }

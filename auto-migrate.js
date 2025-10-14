@@ -88,6 +88,9 @@ async function autoMigrate() {
         // Check and create PC Build Template tables if they don't exist
         await createPCTemplateTablesIfNeeded();
         
+        // Run lastLogin column migration
+        await addLastLoginColumnIfNeeded();
+        
     } catch (error) {
         console.error('❌ Auto-migration failed:', error.message);
         console.error('   This will not prevent server startup, but the column may need to be added manually');
@@ -163,6 +166,63 @@ async function createPCTemplateTablesIfNeeded() {
         
     } catch (error) {
         console.error('❌ Auto-migration: Failed to create PC Build Template tables:', error.message);
+        // Don't throw error to prevent server startup failure
+    }
+}
+
+// Function to add lastLogin column to accounts table if it doesn't exist
+async function addLastLoginColumnIfNeeded() {
+    try {
+        console.log('🔧 Auto-migration: Checking lastLogin column in accounts table...');
+        
+        // Get database name
+        const [dbNameResult] = await db.sequelize.query('SELECT DATABASE() as dbName');
+        const dbName = dbNameResult[0].dbName;
+        
+        // Find the correct accounts table (handle case sensitivity)
+        const [tables] = await db.sequelize.query(`
+            SELECT TABLE_NAME 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = '${dbName}' 
+            AND TABLE_NAME LIKE '%account%'
+        `);
+        
+        const accountTable = tables.find(t => 
+            t.TABLE_NAME.toLowerCase() === 'accounts' || 
+            t.TABLE_NAME.toLowerCase() === 'account'
+        );
+        
+        if (!accountTable) {
+            console.log('⚠️ Auto-migration: No accounts table found');
+            return;
+        }
+        
+        const tableName = accountTable.TABLE_NAME;
+        
+        // Check if the lastLogin column already exists
+        const [results] = await db.sequelize.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = '${dbName}' 
+            AND TABLE_NAME = '${tableName}' 
+            AND COLUMN_NAME = 'lastLogin'
+        `);
+        
+        if (results.length > 0) {
+            console.log('✅ Auto-migration: lastLogin column already exists');
+            return;
+        }
+        
+        // Add the lastLogin column
+        await db.sequelize.query(`
+            ALTER TABLE \`${tableName}\` 
+            ADD COLUMN \`lastLogin\` DATETIME NULL
+        `);
+        
+        console.log('✅ Auto-migration: Added lastLogin column to accounts table');
+        
+    } catch (error) {
+        console.error('❌ Auto-migration: Failed to add lastLogin column:', error.message);
         // Don't throw error to prevent server startup failure
     }
 }

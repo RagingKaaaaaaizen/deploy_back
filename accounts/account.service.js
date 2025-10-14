@@ -62,6 +62,10 @@ async function authenticate({ email, password, ipAddress, userAgent }) {
         throw { message: 'Password is incorrect' };
     }
 
+    // Update last login time
+    account.lastLogin = new Date();
+    await account.save();
+
     const jwtToken = generateJwtToken(account);
     const refreshToken = generateRefreshToken(account, ipAddress);
     await refreshToken.save();
@@ -357,8 +361,8 @@ function randomTokenString() {
 }
 
 function basicDetails(account) {
-    const { id, title, firstName, lastName, email, role, created, updated, isVerified, status } = account;
-    return { id, title, firstName, lastName, email, role, created, updated, isVerified, status };
+    const { id, title, firstName, lastName, email, role, created, updated, isVerified, status, lastLogin } = account;
+    return { id, title, firstName, lastName, email, role, created, updated, isVerified, status, lastLogin };
 }
 
 async function sendVerificationEmail(account, origin) {
