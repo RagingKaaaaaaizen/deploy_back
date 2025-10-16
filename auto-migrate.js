@@ -223,7 +223,10 @@ async function addLastLoginColumnIfNeeded() {
         
     } catch (error) {
         console.error('❌ Auto-migration: Failed to add lastLogin column:', error.message);
-        // Don't throw error to prevent server startup failure
+        console.error('   Full error:', error);
+        // For lastLogin column, we'll allow server startup but log the error
+        // The accounts service now handles missing column gracefully
+        console.warn('⚠️ Server will start but lastLogin functionality will be limited until column is added manually');
     }
 }
 

@@ -62,9 +62,18 @@ async function authenticate({ email, password, ipAddress, userAgent }) {
         throw { message: 'Password is incorrect' };
     }
 
-    // Update last login time
-    account.lastLogin = new Date();
-    await account.save();
+    // Update last login time (if column exists)
+    try {
+        account.lastLogin = new Date();
+        await account.save();
+    } catch (error) {
+        // If lastLogin column doesn't exist, log warning but continue
+        if (error.message && error.message.includes('lastLogin')) {
+            console.warn('⚠️ lastLogin column not found - skipping last login update');
+        } else {
+            throw error; // Re-throw if it's a different error
+        }
+    }
 
     const jwtToken = generateJwtToken(account);
     const refreshToken = generateRefreshToken(account, ipAddress);
@@ -361,7 +370,9 @@ function randomTokenString() {
 }
 
 function basicDetails(account) {
-    const { id, title, firstName, lastName, email, role, created, updated, isVerified, status, lastLogin } = account;
+    const { id, title, firstName, lastName, email, role, created, updated, isVerified, status } = account;
+    // Handle lastLogin column that might not exist yet
+    const lastLogin = account.lastLogin || null;
     return { id, title, firstName, lastName, email, role, created, updated, isVerified, status, lastLogin };
 }
 
