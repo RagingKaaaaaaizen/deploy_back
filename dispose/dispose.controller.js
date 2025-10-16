@@ -116,7 +116,7 @@ exports.validateDisposal = (req, res, next) => {
     
     const { itemId, quantity } = req.body;
     
-    if (!itemId || !quantity) {
+    if (!itemId || quantity === undefined || quantity === null) {
         console.log('ERROR: Missing itemId or quantity');
         return res.status(400).send({ message: 'Item ID and quantity are required' });
     }
