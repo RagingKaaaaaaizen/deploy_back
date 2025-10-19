@@ -38,11 +38,30 @@ async function logActivity(params) {
     return await db.ActivityLog.create(logData);
 }
 
-async function getUserActivity(userId, limit = 50, offset = 0) {
+async function getUserActivity(userId, limit = 50, offset = 0, filters = {}) {
+    const whereClause = { userId };
+    
+    if (filters.entityType) whereClause.entityType = filters.entityType;
+    if (filters.action) whereClause.action = filters.action;
+    
+    // Add date range filtering
+    if (filters.startDate || filters.endDate) {
+        whereClause.createdAt = {};
+        if (filters.startDate) {
+            whereClause.createdAt[db.Sequelize.Op.gte] = new Date(filters.startDate);
+        }
+        if (filters.endDate) {
+            // Add 1 day to endDate to include the entire end day
+            const endDate = new Date(filters.endDate);
+            endDate.setDate(endDate.getDate() + 1);
+            whereClause.createdAt[db.Sequelize.Op.lt] = endDate;
+        }
+    }
+    
     return await db.ActivityLog.findAll({
-        where: { userId },
+        where: whereClause,
         include: [
-            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'preferredUsername'] }
         ],
         order: [['createdAt', 'DESC']],
         limit,
@@ -68,10 +87,24 @@ async function getAllActivity(limit = 100, offset = 0, filters = {}) {
     if (filters.entityType) whereClause.entityType = filters.entityType;
     if (filters.action) whereClause.action = filters.action;
     
+    // Add date range filtering
+    if (filters.startDate || filters.endDate) {
+        whereClause.createdAt = {};
+        if (filters.startDate) {
+            whereClause.createdAt[db.Sequelize.Op.gte] = new Date(filters.startDate);
+        }
+        if (filters.endDate) {
+            // Add 1 day to endDate to include the entire end day
+            const endDate = new Date(filters.endDate);
+            endDate.setDate(endDate.getDate() + 1);
+            whereClause.createdAt[db.Sequelize.Op.lt] = endDate;
+        }
+    }
+    
     return await db.ActivityLog.findAll({
         where: whereClause,
         include: [
-            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'preferredUsername'] }
         ],
         order: [['createdAt', 'DESC']],
         limit,

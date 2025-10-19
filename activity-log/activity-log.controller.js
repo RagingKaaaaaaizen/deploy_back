@@ -4,8 +4,10 @@ const Role = require('../_helpers/role');
 
 // GET user's own activity logs
 exports.getMyActivity = (req, res, next) => {
-    const { limit = 50, offset = 0 } = req.query;
-    activityLogService.getUserActivity(req.user.id, parseInt(limit), parseInt(offset))
+    const { limit = 50, offset = 0, entityType, action, startDate, endDate } = req.query;
+    const filters = { entityType, action, startDate, endDate };
+    
+    activityLogService.getUserActivity(req.user.id, parseInt(limit), parseInt(offset), filters)
         .then(logs => res.json(logs))
         .catch(next);
 };
@@ -16,8 +18,10 @@ exports.getUserActivity = (req, res, next) => {
         return res.status(403).json({ message: 'Access denied' });
     }
     
-    const { limit = 50, offset = 0 } = req.query;
-    activityLogService.getUserActivity(req.params.userId, parseInt(limit), parseInt(offset))
+    const { limit = 50, offset = 0, entityType, action, startDate, endDate } = req.query;
+    const filters = { entityType, action, startDate, endDate };
+    
+    activityLogService.getUserActivity(req.params.userId, parseInt(limit), parseInt(offset), filters)
         .then(logs => res.json(logs))
         .catch(next);
 };
@@ -28,8 +32,8 @@ exports.getAllActivity = (req, res, next) => {
         return res.status(403).json({ message: 'Access denied' });
     }
     
-    const { limit = 100, offset = 0, userId, entityType, action } = req.query;
-    const filters = { userId, entityType, action };
+    const { limit = 100, offset = 0, userId, entityType, action, startDate, endDate } = req.query;
+    const filters = { userId, entityType, action, startDate, endDate };
     
     activityLogService.getAllActivity(parseInt(limit), parseInt(offset), filters)
         .then(logs => res.json(logs))
