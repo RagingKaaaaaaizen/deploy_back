@@ -16,7 +16,7 @@ JWT_SECRET=4b7d938d321573661743c5483f476143b2593e938d2b76e97ef7b12041f80c772d00b
 EMAIL_FROM=noreply@computerlabinventory.com
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-FRONTEND_URL=https://computer-lab-inventory-frontend-d487.onrender.com
+FRONTEND_URL=https://computer-lab-inventory-frontend.onrender.com
 ```
 
 ### **Deployment Steps:**

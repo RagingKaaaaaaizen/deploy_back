@@ -28,7 +28,7 @@
 
 ```bash
 # Test if backend is responding
-curl https://computer-lab-inventory-backend-klzb.onrender.com/health
+curl https://computer-lab-inventory-backend.onrender.com/health
 
 # If you get 503 Server Unavailable, wait 30-60 seconds and try again
 # The server will wake up automatically
@@ -37,13 +37,13 @@ curl https://computer-lab-inventory-backend-klzb.onrender.com/health
 #### **Solution 2: Check CORS Configuration**
 
 The backend is configured to allow:
-- ✅ `https://computer-lab-inventory-frontend-d487.onrender.com`
+- ✅ `https://computer-lab-inventory-frontend.onrender.com`
 - ✅ `http://localhost:4200` (for development)
 
 #### **Solution 3: Verify Environment Variables**
 
 Check that these are set in Render dashboard:
-- ✅ `FRONTEND_URL=https://computer-lab-inventory-frontend-d487.onrender.com`
+- ✅ `FRONTEND_URL=https://computer-lab-inventory-frontend.onrender.com`
 - ✅ `NODE_ENV=production`
 
 ### **Issue 2: Backend Server Keeps Sleeping**
@@ -59,7 +59,7 @@ Or use a free service like UptimeRobot:
 1. Go to https://uptimerobot.com
 2. Create a free account
 3. Add a new monitor:
-   - URL: `https://computer-lab-inventory-backend-klzb.onrender.com/health`
+   - URL: `https://computer-lab-inventory-backend.onrender.com/health`
    - Interval: 5 minutes
    - Type: HTTP(s)
 
@@ -88,7 +88,7 @@ Or use a free service like UptimeRobot:
 
 ### **Step 1: Test Backend Health**
 ```bash
-curl https://computer-lab-inventory-backend-klzb.onrender.com/health
+curl https://computer-lab-inventory-backend.onrender.com/health
 ```
 
 **Expected Response:**
@@ -103,7 +103,7 @@ curl https://computer-lab-inventory-backend-klzb.onrender.com/health
 
 ### **Step 2: Test API Endpoints**
 ```bash
-curl https://computer-lab-inventory-backend-klzb.onrender.com/api/test
+curl https://computer-lab-inventory-backend.onrender.com/api/test
 ```
 
 **Expected Response:**
@@ -142,8 +142,8 @@ Look for errors like:
 3. Try again
 
 ### **Fix 3: Check URLs**
-- ✅ Backend: `https://computer-lab-inventory-backend-klzb.onrender.com`
-- ✅ Frontend: `https://computer-lab-inventory-frontend-d487.onrender.com`
+- ✅ Backend: `https://computer-lab-inventory-backend.onrender.com`
+- ✅ Frontend: `https://computer-lab-inventory-frontend.onrender.com`
 
 ### **Fix 4: Restart Services**
 If issues persist:

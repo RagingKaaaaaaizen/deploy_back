@@ -3,7 +3,7 @@
 
 const https = require('https');
 
-const BACKEND_URL = 'https://computer-lab-inventory-backend-klzb.onrender.com';
+const BACKEND_URL = 'https://computer-lab-inventory-backend.onrender.com';
 const PING_INTERVAL = 14 * 60 * 1000; // 14 minutes (free tier sleeps after 15 minutes)
 
 console.log('🔄 Starting Keep-Alive Service for Render Backend');

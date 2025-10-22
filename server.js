@@ -136,7 +136,7 @@ const corsOptions = {
         if (!origin) return callback(null, true);
         
         const allowedOrigins = [
-            'https://computer-lab-inventory-frontend-d487.onrender.com',
+            'https://computer-lab-inventory-frontend.onrender.com',
             'http://localhost:4200'
         ];
         

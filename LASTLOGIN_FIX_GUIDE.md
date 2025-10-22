@@ -104,7 +104,7 @@ The script now supports production config!
 ### Step 2: Test on Render
 
 After adding the column:
-1. Go to your deployed site: `https://computer-lab-inventory-frontend-d487.onrender.com/account/login`
+1. Go to your deployed site: `https://computer-lab-inventory-frontend.onrender.com/account/login`
 2. Try logging in
 3. Should work without errors!
 

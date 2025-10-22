@@ -33,6 +33,6 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: FRONTEND_URL
-        value: https://computer-lab-inventory-frontend-d487.onrender.com
+        value: https://computer-lab-inventory-frontend.onrender.com
       - key: PORT
         value: 10000

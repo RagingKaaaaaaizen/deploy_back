@@ -3,7 +3,7 @@ const https = require('https');
 
 console.log('🧪 Testing Production Backend...\n');
 
-const backendUrl = 'https://computer-lab-inventory-backend-klzb.onrender.com';
+const backendUrl = 'https://computer-lab-inventory-backend.onrender.com';
 
 // Test 1: Health Check
 console.log('1. Testing Health Check...');
