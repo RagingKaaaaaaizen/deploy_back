@@ -61,7 +61,7 @@ async function getUserActivity(userId, limit = 50, offset = 0, filters = {}) {
     return await db.ActivityLog.findAll({
         where: whereClause,
         include: [
-            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'preferredUsername'] }
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
         ],
         order: [['createdAt', 'DESC']],
         limit,
@@ -104,7 +104,7 @@ async function getAllActivity(limit = 100, offset = 0, filters = {}) {
     return await db.ActivityLog.findAll({
         where: whereClause,
         include: [
-            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'preferredUsername'] }
+            { model: db.Account, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email'] }
         ],
         order: [['createdAt', 'DESC']],
         limit,
