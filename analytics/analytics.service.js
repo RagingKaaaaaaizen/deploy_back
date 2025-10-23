@@ -497,6 +497,13 @@ function getActivityIcon(action) {
 // Generate comprehensive report (simplified version)
 async function generateReport(request) {
     try {
+        console.log('=== GENERATE REPORT DEBUG ===');
+        console.log('Request:', request);
+        console.log('Available models:', Object.keys(db));
+        console.log('db.Stock exists:', !!db.Stock);
+        console.log('db.Dispose exists:', !!db.Dispose);
+        console.log('db.PC exists:', !!db.PC);
+        
         const { startDate, endDate, includeStocks, includeDisposals, includePCs } = request;
         
         const reportData = {
@@ -513,6 +520,10 @@ async function generateReport(request) {
 
         // Get stocks data
         if (includeStocks) {
+            console.log('Fetching stocks data...');
+            if (!db.Stock) {
+                throw new Error('Stock model not available');
+            }
             const stocks = await db.Stock.findAll({
                 include: [
                     { 
@@ -547,6 +558,10 @@ async function generateReport(request) {
 
         // Get disposals data
         if (includeDisposals) {
+            console.log('Fetching disposals data...');
+            if (!db.Dispose) {
+                throw new Error('Dispose model not available');
+            }
             const disposals = await db.Dispose.findAll({
                 include: [
                     { 
@@ -585,6 +600,10 @@ async function generateReport(request) {
 
         // Get PC management data
         if (includePCs) {
+            console.log('Fetching PC data...');
+            if (!db.PC) {
+                throw new Error('PC model not available');
+            }
             const pcs = await db.PC.findAll({
                 include: [
                     { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
