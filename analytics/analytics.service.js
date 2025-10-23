@@ -514,6 +514,12 @@ async function generateReport(request) {
         }
         
         if (!db.Stock || !db.Dispose || !db.PC) {
+            console.error('Database models not available:', {
+                Stock: !!db.Stock,
+                Dispose: !!db.Dispose,
+                PC: !!db.PC,
+                allModels: Object.keys(db)
+            });
             throw new Error('Database models not available after waiting');
         }
         
@@ -535,9 +541,10 @@ async function generateReport(request) {
         if (includeStocks) {
             console.log('Fetching stocks data...');
             if (!db.Stock) {
-                throw new Error('Stock model not available');
-            }
-            const stocks = await db.Stock.findAll({
+                console.error('Stock model not available, skipping stocks data');
+                reportData.stocks = [];
+            } else {
+                const stocks = await db.Stock.findAll({
                 include: [
                     { 
                         model: db.Item, 
@@ -565,16 +572,18 @@ async function generateReport(request) {
                 createdAt: stock.createdAt
             }));
 
-            reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
-            reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+                reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
+                reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+            }
         }
 
         // Get disposals data
         if (includeDisposals) {
             console.log('Fetching disposals data...');
             if (!db.Dispose) {
-                throw new Error('Dispose model not available');
-            }
+                console.error('Dispose model not available, skipping disposals data');
+                reportData.disposals = [];
+            } else {
             const disposals = await db.Dispose.findAll({
                 include: [
                     { 
@@ -607,16 +616,18 @@ async function generateReport(request) {
                 createdAt: disposal.createdAt
             }));
 
-            reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
-            reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.disposalValue || 0), 0);
+                reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
+                reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.disposalValue || 0), 0);
+            }
         }
 
         // Get PC management data
         if (includePCs) {
             console.log('Fetching PC data...');
             if (!db.PC) {
-                throw new Error('PC model not available');
-            }
+                console.error('PC model not available, skipping PC data');
+                reportData.pcs = [];
+            } else {
             const pcs = await db.PC.findAll({
                 include: [
                     { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
@@ -637,8 +648,9 @@ async function generateReport(request) {
                 updatedAt: pc.updatedAt
             }));
 
-            reportData.summary.totalPCs = pcs.length;
-            reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+                reportData.summary.totalPCs = pcs.length;
+                reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+            }
         }
 
         // Calculate total value
