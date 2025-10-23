@@ -504,6 +504,19 @@ async function generateReport(request) {
         console.log('db.Dispose exists:', !!db.Dispose);
         console.log('db.PC exists:', !!db.PC);
         
+        // Wait for database models to be ready
+        let attempts = 0;
+        const maxAttempts = 10;
+        while (attempts < maxAttempts && (!db.Stock || !db.Dispose || !db.PC)) {
+            console.log(`Waiting for database models... attempt ${attempts + 1}/${maxAttempts}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+        }
+        
+        if (!db.Stock || !db.Dispose || !db.PC) {
+            throw new Error('Database models not available after waiting');
+        }
+        
         const { startDate, endDate, includeStocks, includeDisposals, includePCs } = request;
         
         const reportData = {
