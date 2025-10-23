@@ -199,3 +199,11 @@ exports.setAutomatedReportSchedule = (req, res, next) => {
         .then(data => res.json(data))
         .catch(next);
 };
+
+// POST generate comprehensive report
+exports.generateReport = (req, res, next) => {
+    const request = req.body;
+    analyticsService.generateReport(request)
+        .then(data => res.json(data))
+        .catch(next);
+};

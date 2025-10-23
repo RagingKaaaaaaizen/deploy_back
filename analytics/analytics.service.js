@@ -542,8 +542,77 @@ async function generateReport(request) {
             }));
 
             reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
-            reportData.summary.totalValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+            reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
         }
+
+        // Get disposals data
+        if (includeDisposals) {
+            const disposals = await db.Dispose.findAll({
+                include: [
+                    { 
+                        model: db.Item, 
+                        as: 'item', 
+                        attributes: ['id', 'name', 'description'],
+                        include: [
+                            { model: db.Category, as: 'category', attributes: ['id', 'name'] },
+                            { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
+                        ]
+                    },
+                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] },
+                    { model: db.Account, as: 'disposedBy', attributes: ['id', 'firstName', 'lastName'] }
+                ],
+                order: [['disposalDate', 'DESC']]
+            });
+
+            reportData.disposals = disposals.map(disposal => ({
+                id: disposal.id,
+                itemName: disposal.item?.name || 'Unknown Item',
+                categoryName: disposal.item?.category?.name || 'Unknown Category',
+                brandName: disposal.item?.brand?.name || 'Unknown Brand',
+                quantity: disposal.quantity,
+                locationName: disposal.location?.name || 'Unknown Location',
+                disposalValue: disposal.disposalValue,
+                totalValue: disposal.disposalValue,
+                reason: disposal.reason,
+                disposalDate: disposal.disposalDate,
+                disposedByName: disposal.disposedBy ? `${disposal.disposedBy.firstName} ${disposal.disposedBy.lastName}` : 'Unknown User',
+                createdAt: disposal.createdAt
+            }));
+
+            reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
+            reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.disposalValue || 0), 0);
+        }
+
+        // Get PC management data
+        if (includePCs) {
+            const pcs = await db.PC.findAll({
+                include: [
+                    { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
+                    { model: db.PCComponent, as: 'components', attributes: ['id', 'name', 'type', 'specifications'] }
+                ],
+                order: [['createdAt', 'DESC']]
+            });
+
+            reportData.pcs = pcs.map(pc => ({
+                id: pc.id,
+                name: pc.name,
+                roomLocationName: pc.roomLocation?.name || 'Unknown Location',
+                status: pc.status,
+                componentsCount: pc.components ? pc.components.length : 0,
+                totalValue: pc.totalValue || 0,
+                value: pc.value || 0,
+                createdAt: pc.createdAt,
+                updatedAt: pc.updatedAt
+            }));
+
+            reportData.summary.totalPCs = pcs.length;
+            reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+        }
+
+        // Calculate total value
+        reportData.summary.totalValue = (reportData.summary.stockValue || 0) + 
+                                      (reportData.summary.disposalValue || 0) + 
+                                      (reportData.summary.pcValue || 0);
 
         return reportData;
     } catch (error) {
