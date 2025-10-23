@@ -504,27 +504,9 @@ async function generateReport(request) {
         console.log('db.Dispose exists:', !!db.Dispose);
         console.log('db.PC exists:', !!db.PC);
         
-        // Wait for database models to be ready
-        let attempts = 0;
-        const maxAttempts = 10;
-        while (attempts < maxAttempts && (!db.Stock || !db.Dispose || !db.PC)) {
-            console.log(`Waiting for database models... attempt ${attempts + 1}/${maxAttempts}`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-        }
-        
-        if (!db.Stock || !db.Dispose || !db.PC) {
-            console.error('Database models not available:', {
-                Stock: !!db.Stock,
-                Dispose: !!db.Dispose,
-                PC: !!db.PC,
-                allModels: Object.keys(db)
-            });
-            throw new Error('Database models not available after waiting');
-        }
-        
         const { startDate, endDate, includeStocks, includeDisposals, includePCs } = request;
         
+        // Initialize report data with defaults
         const reportData = {
             stocks: [],
             disposals: [],
@@ -533,132 +515,205 @@ async function generateReport(request) {
                 totalStocks: 0,
                 totalDisposals: 0,
                 totalPCs: 0,
-                totalValue: 0
+                totalValue: 0,
+                stockValue: 0,
+                disposalValue: 0,
+                pcValue: 0
             }
         };
-
-        // Get stocks data
-        if (includeStocks) {
-            console.log('Fetching stocks data...');
-            if (!db.Stock) {
-                console.error('Stock model not available, skipping stocks data');
-                reportData.stocks = [];
-            } else {
+        
+        // Get stocks data with simple approach
+        if (includeStocks && db.Stock) {
+            try {
+                console.log('Fetching stocks data...');
                 const stocks = await db.Stock.findAll({
-                include: [
-                    { 
-                        model: db.Item, 
-                        as: 'item', 
+                    attributes: ['id', 'itemId', 'quantity', 'locationId', 'price', 'totalPrice', 'createdAt'],
+                    order: [['createdAt', 'DESC']]
+                });
+                
+                // Get related data separately to avoid association issues
+                const itemIds = [...new Set(stocks.map(s => s.itemId))];
+                const locationIds = [...new Set(stocks.map(s => s.locationId))];
+                
+                let items = [];
+                let locations = [];
+                
+                if (itemIds.length > 0 && db.Item) {
+                    items = await db.Item.findAll({
+                        where: { id: itemIds },
                         attributes: ['id', 'name', 'description'],
                         include: [
                             { model: db.Category, as: 'category', attributes: ['id', 'name'] },
                             { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
                         ]
-                    },
-                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] }
-                ],
-                order: [['createdAt', 'DESC']]
-            });
-
-            reportData.stocks = stocks.map(stock => ({
-                id: stock.id,
-                itemName: stock.item?.name || 'Unknown Item',
-                categoryName: stock.item?.category?.name || 'Unknown Category',
-                brandName: stock.item?.brand?.name || 'Unknown Brand',
-                quantity: stock.quantity,
-                locationName: stock.location?.name || 'Unknown Location',
-                totalPrice: stock.totalPrice,
-                price: stock.price,
-                createdAt: stock.createdAt
-            }));
-
+                    });
+                }
+                
+                if (locationIds.length > 0 && db.StorageLocation) {
+                    locations = await db.StorageLocation.findAll({
+                        where: { id: locationIds },
+                        attributes: ['id', 'name', 'description']
+                    });
+                }
+                
+                reportData.stocks = stocks.map(stock => {
+                    const item = items.find(i => i.id === stock.itemId);
+                    const location = locations.find(l => l.id === stock.locationId);
+                    
+                    return {
+                        id: stock.id,
+                        itemName: item?.name || 'Unknown Item',
+                        categoryName: item?.category?.name || 'Unknown Category',
+                        brandName: item?.brand?.name || 'Unknown Brand',
+                        quantity: stock.quantity,
+                        locationName: location?.name || 'Unknown Location',
+                        totalPrice: stock.totalPrice,
+                        price: stock.price,
+                        createdAt: stock.createdAt
+                    };
+                });
+                
                 reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
                 reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
+                
+            } catch (error) {
+                console.error('Error fetching stocks:', error);
+                reportData.stocks = [];
             }
         }
-
-        // Get disposals data
-        if (includeDisposals) {
-            console.log('Fetching disposals data...');
-            if (!db.Dispose) {
-                console.error('Dispose model not available, skipping disposals data');
-                reportData.disposals = [];
-            } else {
-            const disposals = await db.Dispose.findAll({
-                include: [
-                    { 
-                        model: db.Item, 
-                        as: 'item', 
+        
+        // Get disposals data with simple approach
+        if (includeDisposals && db.Dispose) {
+            try {
+                console.log('Fetching disposals data...');
+                const disposals = await db.Dispose.findAll({
+                    attributes: ['id', 'itemId', 'quantity', 'locationId', 'disposalValue', 'reason', 'disposalDate', 'createdBy', 'createdAt'],
+                    order: [['disposalDate', 'DESC']]
+                });
+                
+                // Get related data separately
+                const itemIds = [...new Set(disposals.map(d => d.itemId))];
+                const locationIds = [...new Set(disposals.map(d => d.locationId))];
+                const userIds = [...new Set(disposals.map(d => d.createdBy))];
+                
+                let items = [];
+                let locations = [];
+                let users = [];
+                
+                if (itemIds.length > 0 && db.Item) {
+                    items = await db.Item.findAll({
+                        where: { id: itemIds },
                         attributes: ['id', 'name', 'description'],
                         include: [
                             { model: db.Category, as: 'category', attributes: ['id', 'name'] },
                             { model: db.Brand, as: 'brand', attributes: ['id', 'name'] }
                         ]
-                    },
-                    { model: db.StorageLocation, as: 'location', attributes: ['id', 'name', 'description'] },
-                    { model: db.Account, as: 'disposedBy', attributes: ['id', 'firstName', 'lastName'] }
-                ],
-                order: [['disposalDate', 'DESC']]
-            });
-
-            reportData.disposals = disposals.map(disposal => ({
-                id: disposal.id,
-                itemName: disposal.item?.name || 'Unknown Item',
-                categoryName: disposal.item?.category?.name || 'Unknown Category',
-                brandName: disposal.item?.brand?.name || 'Unknown Brand',
-                quantity: disposal.quantity,
-                locationName: disposal.location?.name || 'Unknown Location',
-                disposalValue: disposal.disposalValue,
-                totalValue: disposal.disposalValue,
-                reason: disposal.reason,
-                disposalDate: disposal.disposalDate,
-                disposedByName: disposal.disposedBy ? `${disposal.disposedBy.firstName} ${disposal.disposedBy.lastName}` : 'Unknown User',
-                createdAt: disposal.createdAt
-            }));
-
+                    });
+                }
+                
+                if (locationIds.length > 0 && db.StorageLocation) {
+                    locations = await db.StorageLocation.findAll({
+                        where: { id: locationIds },
+                        attributes: ['id', 'name', 'description']
+                    });
+                }
+                
+                if (userIds.length > 0 && db.Account) {
+                    users = await db.Account.findAll({
+                        where: { id: userIds },
+                        attributes: ['id', 'firstName', 'lastName']
+                    });
+                }
+                
+                reportData.disposals = disposals.map(disposal => {
+                    const item = items.find(i => i.id === disposal.itemId);
+                    const location = locations.find(l => l.id === disposal.locationId);
+                    const user = users.find(u => u.id === disposal.createdBy);
+                    
+                    return {
+                        id: disposal.id,
+                        itemName: item?.name || 'Unknown Item',
+                        categoryName: item?.category?.name || 'Unknown Category',
+                        brandName: item?.brand?.name || 'Unknown Brand',
+                        quantity: disposal.quantity,
+                        locationName: location?.name || 'Unknown Location',
+                        disposalValue: disposal.disposalValue,
+                        totalValue: disposal.disposalValue,
+                        reason: disposal.reason,
+                        disposalDate: disposal.disposalDate,
+                        disposedByName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
+                        createdAt: disposal.createdAt
+                    };
+                });
+                
                 reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
                 reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.disposalValue || 0), 0);
+                
+            } catch (error) {
+                console.error('Error fetching disposals:', error);
+                reportData.disposals = [];
             }
         }
-
-        // Get PC management data
-        if (includePCs) {
-            console.log('Fetching PC data...');
-            if (!db.PC) {
-                console.error('PC model not available, skipping PC data');
-                reportData.pcs = [];
-            } else {
-            const pcs = await db.PC.findAll({
-                include: [
-                    { model: db.RoomLocation, as: 'roomLocation', attributes: ['id', 'name', 'description'] },
-                    { model: db.PCComponent, as: 'components', attributes: ['id', 'name', 'type', 'specifications'] }
-                ],
-                order: [['createdAt', 'DESC']]
-            });
-
-            reportData.pcs = pcs.map(pc => ({
-                id: pc.id,
-                name: pc.name,
-                roomLocationName: pc.roomLocation?.name || 'Unknown Location',
-                status: pc.status,
-                componentsCount: pc.components ? pc.components.length : 0,
-                totalValue: pc.totalValue || 0,
-                value: pc.value || 0,
-                createdAt: pc.createdAt,
-                updatedAt: pc.updatedAt
-            }));
-
+        
+        // Get PC data with simple approach
+        if (includePCs && db.PC) {
+            try {
+                console.log('Fetching PC data...');
+                const pcs = await db.PC.findAll({
+                    attributes: ['id', 'name', 'roomLocationId', 'status', 'totalValue', 'value', 'createdAt', 'updatedAt'],
+                    order: [['createdAt', 'DESC']]
+                });
+                
+                // Get related data separately
+                const locationIds = [...new Set(pcs.map(pc => pc.roomLocationId))];
+                let locations = [];
+                
+                if (locationIds.length > 0 && db.RoomLocation) {
+                    locations = await db.RoomLocation.findAll({
+                        where: { id: locationIds },
+                        attributes: ['id', 'name', 'description']
+                    });
+                }
+                
+                reportData.pcs = pcs.map(pc => {
+                    const location = locations.find(l => l.id === pc.roomLocationId);
+                    
+                    return {
+                        id: pc.id,
+                        name: pc.name,
+                        roomLocationName: location?.name || 'Unknown Location',
+                        status: pc.status,
+                        componentsCount: 0, // Simplified for now
+                        totalValue: pc.totalValue || 0,
+                        value: pc.value || 0,
+                        createdAt: pc.createdAt,
+                        updatedAt: pc.updatedAt
+                    };
+                });
+                
                 reportData.summary.totalPCs = pcs.length;
                 reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+                
+            } catch (error) {
+                console.error('Error fetching PCs:', error);
+                reportData.pcs = [];
             }
         }
-
+        
         // Calculate total value
         reportData.summary.totalValue = (reportData.summary.stockValue || 0) + 
                                       (reportData.summary.disposalValue || 0) + 
                                       (reportData.summary.pcValue || 0);
-
+        
+        console.log('Report generated successfully:', {
+            stocks: reportData.stocks.length,
+            disposals: reportData.disposals.length,
+            pcs: reportData.pcs.length,
+            summary: reportData.summary
+        });
+        
         return reportData;
+        
     } catch (error) {
         console.error('Error generating report:', error);
         throw error;
