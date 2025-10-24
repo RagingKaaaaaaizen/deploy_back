@@ -78,6 +78,14 @@ exports.getMonthlyDisposals = (req, res, next) => {
         .catch(next);
 };
 
+// GET item lifespans
+exports.getItemLifespans = (req, res, next) => {
+    const months = parseInt(req.query.months) || 12;
+    analyticsService.getItemLifespans(months)
+        .then(data => res.json(data))
+        .catch(next);
+};
+
 // POST generate report
 exports.generateReport = (req, res, next) => {
     console.log('=== GENERATE REPORT REQUEST ===');

@@ -12,6 +12,7 @@ module.exports = {
     getStockByLocation,
     getMonthlyStockAdditions,
     getMonthlyDisposals,
+    getItemLifespans,
     generateReport,
     // Enhanced analytics
     getTopUsedCategories,
@@ -473,6 +474,104 @@ async function getMonthlyDisposals(months = 12) {
         }));
     } catch (error) {
         console.error('Error getting monthly disposals:', error);
+        throw error;
+    }
+}
+
+async function getItemLifespans(months = 12) {
+    try {
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - months);
+
+        // Get all disposals with their source stock information
+        const disposals = await db.Dispose.findAll({
+            where: {
+                disposalDate: {
+                    [Op.gte]: startDate
+                },
+                returnedToStock: false,
+                sourceStockId: {
+                    [Op.ne]: null
+                }
+            },
+            include: [
+                {
+                    model: db.Item,
+                    as: 'item',
+                    attributes: ['id', 'name']
+                }
+            ],
+            order: [['disposalDate', 'ASC']]
+        });
+
+        // Get stock entries for these disposals
+        const sourceStockIds = disposals.map(d => d.sourceStockId).filter(id => id);
+        const stockEntries = await db.Stock.findAll({
+            where: {
+                id: {
+                    [Op.in]: sourceStockIds
+                }
+            },
+            attributes: ['id', 'createdAt', 'itemId']
+        });
+
+        // Create a map of stock entries by ID
+        const stockMap = {};
+        stockEntries.forEach(stock => {
+            stockMap[stock.id] = stock;
+        });
+
+        // Calculate lifespan for each disposal
+        const lifespanData = {};
+        
+        disposals.forEach(disposal => {
+            if (disposal.sourceStockId && stockMap[disposal.sourceStockId]) {
+                const stock = stockMap[disposal.sourceStockId];
+                const itemName = disposal.item?.name || `Item ${disposal.itemId}`;
+                
+                // Calculate lifespan in days
+                const stockDate = new Date(stock.createdAt);
+                const disposalDate = new Date(disposal.disposalDate);
+                const lifespanDays = Math.floor((disposalDate - stockDate) / (1000 * 60 * 60 * 24));
+                
+                if (lifespanDays >= 0) { // Only include positive lifespans
+                    if (!lifespanData[itemName]) {
+                        lifespanData[itemName] = {
+                            itemId: disposal.itemId,
+                            itemName: itemName,
+                            lifespans: []
+                        };
+                    }
+                    
+                    lifespanData[itemName].lifespans.push({
+                        disposalDate: disposal.disposalDate,
+                        stockDate: stock.createdAt,
+                        lifespanDays: lifespanDays,
+                        quantity: disposal.quantity
+                    });
+                }
+            }
+        });
+
+        // Calculate average lifespan for each item
+        const result = Object.values(lifespanData).map(item => {
+            const totalDays = item.lifespans.reduce((sum, l) => sum + l.lifespanDays, 0);
+            const avgLifespan = totalDays / item.lifespans.length;
+            
+            return {
+                itemId: item.itemId,
+                itemName: item.itemName,
+                averageLifespanDays: Math.round(avgLifespan * 10) / 10, // Round to 1 decimal
+                totalDisposals: item.lifespans.length,
+                lifespans: item.lifespans
+            };
+        });
+
+        // Sort by itemName
+        return result.sort((a, b) => a.itemName.localeCompare(b.itemName));
+        
+    } catch (error) {
+        console.error('Error fetching item lifespans:', error);
         throw error;
     }
 }

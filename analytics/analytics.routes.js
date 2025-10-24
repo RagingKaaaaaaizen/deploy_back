@@ -28,6 +28,7 @@ router.get('/stock-by-location', authorize([Role.Admin, Role.SuperAdmin]), analy
 // Monthly reports - available to admin and super admin
 router.get('/monthly-stock-additions', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getMonthlyStockAdditions);
 router.get('/monthly-disposals', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getMonthlyDisposals);
+router.get('/item-lifespans', authorize([Role.Admin, Role.SuperAdmin]), analyticsController.getItemLifespans);
 
 // Report generation - available to all authenticated users
 router.post('/generate-report', analyticsController.generateReport);
