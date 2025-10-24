@@ -526,7 +526,7 @@ async function generateReport(request) {
         if (includeStocks && db.Stock) {
             try {
                 console.log('Fetching stocks data...');
-                const stocks = await db.Stock.findAll({
+            const stocks = await db.Stock.findAll({
                     attributes: ['id', 'itemId', 'quantity', 'locationId', 'price', 'totalPrice', 'createdAt'],
                     order: [['createdAt', 'DESC']]
                 });
@@ -561,19 +561,19 @@ async function generateReport(request) {
                     const location = locations.find(l => l.id === stock.locationId);
                     
                     return {
-                        id: stock.id,
+                id: stock.id,
                         itemName: item?.name || 'Unknown Item',
                         categoryName: item?.category?.name || 'Unknown Category',
                         brandName: item?.brand?.name || 'Unknown Brand',
-                        quantity: stock.quantity,
+                quantity: stock.quantity,
                         locationName: location?.name || 'Unknown Location',
-                        totalPrice: stock.totalPrice,
-                        price: stock.price,
-                        createdAt: stock.createdAt
+                totalPrice: stock.totalPrice,
+                price: stock.price,
+                createdAt: stock.createdAt
                     };
                 });
-                
-                reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
+
+            reportData.summary.totalStocks = stocks.reduce((sum, stock) => sum + stock.quantity, 0);
                 reportData.summary.stockValue = stocks.reduce((sum, stock) => sum + (stock.totalPrice || 0), 0);
                 
             } catch (error) {
@@ -666,6 +666,14 @@ async function generateReport(request) {
                 console.log('Fetching PC data...');
                 const pcs = await db.PC.findAll({
                     attributes: ['id', 'name', 'roomLocationId', 'status', 'totalValue', 'value', 'createdAt', 'updatedAt'],
+                    include: [
+                        {
+                            model: db.PCComponent,
+                            as: 'components',
+                            attributes: ['id', 'itemId', 'quantity', 'status'],
+                            required: false
+                        }
+                    ],
                     order: [['createdAt', 'DESC']]
                 });
                 
@@ -680,15 +688,64 @@ async function generateReport(request) {
                     });
                 }
                 
+                // Get all component item IDs to fetch item details
+                const allComponentItemIds = [];
+                pcs.forEach(pc => {
+                    if (pc.components) {
+                        pc.components.forEach(comp => {
+                            if (comp.itemId) allComponentItemIds.push(comp.itemId);
+                        });
+                    }
+                });
+                
+                // Fetch component items
+                let componentItems = [];
+                if (allComponentItemIds.length > 0 && db.Item) {
+                    componentItems = await db.Item.findAll({
+                        where: { id: [...new Set(allComponentItemIds)] },
+                        attributes: ['id', 'name', 'description'],
+                        include: [
+                            { model: db.Category, as: 'category', attributes: ['id', 'name'] }
+                        ]
+                    });
+                }
+                
+                // Fetch stock data for component prices
+                let componentStocks = [];
+                if (allComponentItemIds.length > 0 && db.Stock) {
+                    componentStocks = await db.Stock.findAll({
+                        where: { itemId: [...new Set(allComponentItemIds)] },
+                        attributes: ['itemId', 'price']
+                    });
+                }
+                
                 reportData.pcs = pcs.map(pc => {
                     const location = locations.find(l => l.id === pc.roomLocationId);
+                    
+                    // Map components with item details
+                    const mappedComponents = pc.components ? pc.components.map(comp => {
+                        const item = componentItems.find(i => i.id === comp.itemId);
+                        const stock = componentStocks.find(s => s.itemId === comp.itemId);
+                        const price = stock?.price || 0;
+                        
+                        return {
+                            id: comp.id,
+                            itemId: comp.itemId,
+                            itemName: item?.name || 'Unknown Item',
+                            quantity: comp.quantity || 1,
+                            price: price,
+                            totalValue: price * (comp.quantity || 1),
+                            status: comp.status || 'Active'
+                        };
+                    }) : [];
                     
                     return {
                         id: pc.id,
                         name: pc.name,
                         roomLocationName: location?.name || 'Unknown Location',
                         status: pc.status,
-                        componentsCount: 0, // Simplified for now
+                        components: mappedComponents,
+                        componentsCount: mappedComponents.length,
                         totalValue: pc.totalValue || 0,
                         value: pc.value || 0,
                         createdAt: pc.createdAt,
@@ -716,7 +773,7 @@ async function generateReport(request) {
             pcs: reportData.pcs.length,
             summary: reportData.summary
         });
-        
+
         return reportData;
         
     } catch (error) {
