@@ -20,11 +20,11 @@ module.exports = router;
 function createSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().required(),
-        serialNumber: Joi.string().allow(''),
+        serialNumber: Joi.string().allow('', null).optional(),
         roomLocationId: Joi.number().required(),
         status: Joi.string().valid('Active', 'Inactive', 'Maintenance', 'Retired').default('Active'),
-        assignedTo: Joi.string().allow(''),
-        notes: Joi.string().allow('')
+        assignedTo: Joi.string().allow('', null).optional(),
+        notes: Joi.string().allow('', null).optional()
     });
     validateRequest(req, next, schema);
 }

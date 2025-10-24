@@ -117,6 +117,23 @@ async function create(params, userId) {
         console.error('❌ PC Service - Error message:', error.message);
         console.error('❌ PC Service - Error stack:', error.stack);
         
+        // If it's a Sequelize validation error
+        if (error.name === 'SequelizeValidationError') {
+            const validationErrors = error.errors.map(e => `${e.path}: ${e.message}`).join(', ');
+            console.error('❌ PC Service - Validation errors:', validationErrors);
+            throw new Error(`Validation error: ${validationErrors}`);
+        }
+        
+        // If it's a Sequelize unique constraint error (duplicate serial number)
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            const field = error.errors[0]?.path || 'field';
+            console.error('❌ PC Service - Unique constraint violated on:', field);
+            if (field === 'serialNumber') {
+                throw new Error('A PC with this serial number already exists. Please use a unique serial number or leave it empty.');
+            }
+            throw new Error(`Duplicate ${field}. Please use a unique value.`);
+        }
+        
         // If it's a Sequelize foreign key error, provide a better message
         if (error.name === 'SequelizeForeignKeyConstraintError') {
             throw new Error(`Invalid room location. The selected location may have been deleted. Please refresh the page and select a valid location.`);
