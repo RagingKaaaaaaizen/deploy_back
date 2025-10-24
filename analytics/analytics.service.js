@@ -675,8 +675,9 @@ async function generateReport(request) {
                     const user = users.find(u => u.id === disposal.createdBy);
                     
                     // Get price from multiple sources (for old records with 0 values)
-                    let unitPrice = disposal.disposalValue || 0;
-                    let totalValue = disposal.totalValue || 0;
+                    // NOTE: DECIMAL fields from Sequelize come back as strings. Always coerce to numbers.
+                    let unitPrice = disposal.disposalValue != null ? parseFloat(disposal.disposalValue) : 0;
+                    let totalValue = disposal.totalValue != null ? parseFloat(disposal.totalValue) : 0;
                     
                     console.log(`\n--- Processing Disposal ID ${disposal.id} (${item?.name || 'Unknown'}) ---`);
                     console.log(`  DB Values: disposalValue=${disposal.disposalValue}, totalValue=${disposal.totalValue}`);
@@ -688,7 +689,7 @@ async function generateReport(request) {
                         console.log(`  Trying source stock lookup for sourceStockId=${disposal.sourceStockId}...`);
                         const sourceStock = sourceStocks.find(s => s.id === disposal.sourceStockId);
                         if (sourceStock) {
-                            unitPrice = sourceStock.price || 0;
+                            unitPrice = sourceStock.price != null ? parseFloat(sourceStock.price) : 0;
                             console.log(`  ✅ Found source stock price: PHP ${unitPrice}`);
                         } else {
                             console.log(`  ❌ Source stock not found in ${sourceStocks.length} stocks`);
@@ -702,7 +703,7 @@ async function generateReport(request) {
                         console.log(`  Trying current stock lookup for itemId=${disposal.itemId}...`);
                         const currentStock = currentStockPrices.find(s => s.itemId === disposal.itemId);
                         if (currentStock) {
-                            unitPrice = currentStock.price || 0;
+                            unitPrice = currentStock.price != null ? parseFloat(currentStock.price) : 0;
                             console.log(`  ✅ Found current stock price: PHP ${unitPrice}`);
                         } else {
                             console.log(`  ❌ No stock price found (checked ${currentStockPrices.length} stocks)`);
@@ -726,9 +727,9 @@ async function generateReport(request) {
                         brandName: item?.brand?.name || 'Unknown Brand',
                         quantity: disposal.quantity,
                         locationName: location?.name || 'Unknown Location',
-                        price: unitPrice, // Unit price (from disposal, source stock, or current stock)
-                        disposalValue: unitPrice, // Set to calculated unit price
-                        totalValue: totalValue, // Use database or calculated total
+                        price: Number(unitPrice) || 0, // Ensure number type
+                        disposalValue: Number(unitPrice) || 0, // Ensure number type for compatibility
+                        totalValue: Number(totalValue) || 0, // Ensure number type
                         reason: disposal.reason,
                         disposalDate: disposal.disposalDate,
                         disposedByName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
@@ -737,8 +738,8 @@ async function generateReport(request) {
                 });
                 
                 // Calculate summary from mapped disposal data (with calculated values)
-                reportData.summary.totalDisposals = reportData.disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
-                reportData.summary.disposalValue = reportData.disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
+                reportData.summary.totalDisposals = reportData.disposals.reduce((sum, disposal) => sum + (Number(disposal.quantity) || 0), 0);
+                reportData.summary.disposalValue = reportData.disposals.reduce((sum, disposal) => sum + (Number(disposal.totalValue) || 0), 0);
                 
             } catch (error) {
                 console.error('Error fetching disposals:', error);
