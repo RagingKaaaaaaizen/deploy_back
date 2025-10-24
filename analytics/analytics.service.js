@@ -591,13 +591,24 @@ async function generateReport(request) {
                     order: [['disposalDate', 'DESC']]
                 });
                 
-                console.log('Disposal data sample:', disposals.length > 0 ? {
-                    id: disposals[0].id,
-                    quantity: disposals[0].quantity,
-                    disposalValue: disposals[0].disposalValue,
-                    totalValue: disposals[0].totalValue,
-                    sourceStockId: disposals[0].sourceStockId
-                } : 'No disposals');
+                console.log('=== DISPOSAL DATA DEBUG ===');
+                console.log(`Total disposals fetched: ${disposals.length}`);
+                if (disposals.length > 0) {
+                    console.log('First disposal:', {
+                        id: disposals[0].id,
+                        itemId: disposals[0].itemId,
+                        quantity: disposals[0].quantity,
+                        disposalValue: disposals[0].disposalValue,
+                        totalValue: disposals[0].totalValue,
+                        sourceStockId: disposals[0].sourceStockId
+                    });
+                    
+                    // Count how many have 0 values
+                    const withZeroValue = disposals.filter(d => d.disposalValue === 0 || d.disposalValue === null).length;
+                    const withoutSourceStock = disposals.filter(d => !d.sourceStockId).length;
+                    console.log(`Disposals with disposalValue=0: ${withZeroValue}`);
+                    console.log(`Disposals without sourceStockId: ${withoutSourceStock}`);
+                }
                 
                 // Get related data separately
                 const itemIds = [...new Set(disposals.map(d => d.itemId))];
@@ -667,34 +678,45 @@ async function generateReport(request) {
                     let unitPrice = disposal.disposalValue || 0;
                     let totalValue = disposal.totalValue || 0;
                     
-                    console.log(`Disposal ${disposal.id}: disposalValue=${disposal.disposalValue}, totalValue=${disposal.totalValue}, itemId=${disposal.itemId}, sourceStockId=${disposal.sourceStockId}`);
+                    console.log(`\n--- Processing Disposal ID ${disposal.id} (${item?.name || 'Unknown'}) ---`);
+                    console.log(`  DB Values: disposalValue=${disposal.disposalValue}, totalValue=${disposal.totalValue}`);
+                    console.log(`  IDs: itemId=${disposal.itemId}, sourceStockId=${disposal.sourceStockId}`);
+                    console.log(`  Quantity: ${disposal.quantity}`);
                     
                     // If disposalValue is 0, try to get price from source stock
                     if (unitPrice === 0 && disposal.sourceStockId) {
+                        console.log(`  Trying source stock lookup for sourceStockId=${disposal.sourceStockId}...`);
                         const sourceStock = sourceStocks.find(s => s.id === disposal.sourceStockId);
                         if (sourceStock) {
                             unitPrice = sourceStock.price || 0;
-                            console.log(`Found source stock price: ${unitPrice}`);
+                            console.log(`  ✅ Found source stock price: PHP ${unitPrice}`);
                         } else {
-                            console.log('Source stock not found');
+                            console.log(`  ❌ Source stock not found in ${sourceStocks.length} stocks`);
                         }
+                    } else if (unitPrice === 0) {
+                        console.log(`  ⚠️  No sourceStockId - skipping source stock lookup`);
                     }
                     
                     // If still 0, try to get current stock price for this item
                     if (unitPrice === 0 && disposal.itemId) {
+                        console.log(`  Trying current stock lookup for itemId=${disposal.itemId}...`);
                         const currentStock = currentStockPrices.find(s => s.itemId === disposal.itemId);
                         if (currentStock) {
                             unitPrice = currentStock.price || 0;
-                            console.log(`Found current stock price: ${unitPrice} for itemId ${disposal.itemId}`);
+                            console.log(`  ✅ Found current stock price: PHP ${unitPrice}`);
                         } else {
-                            console.log(`No stock price found for itemId ${disposal.itemId}`);
+                            console.log(`  ❌ No stock price found (checked ${currentStockPrices.length} stocks)`);
                         }
                     }
                     
                     // Calculate total if not in database
                     if (totalValue === 0 && unitPrice > 0) {
                         totalValue = unitPrice * (disposal.quantity || 0);
-                        console.log(`Calculated total: ${totalValue} = ${unitPrice} × ${disposal.quantity}`);
+                        console.log(`  ✅ Calculated total: PHP ${totalValue} = ${unitPrice} × ${disposal.quantity}`);
+                    } else if (totalValue === 0) {
+                        console.log(`  ❌ FINAL: price=0, total=0 - NO PRICE SOURCE FOUND`);
+                    } else {
+                        console.log(`  ✅ Using DB totalValue: PHP ${totalValue}`);
                     }
                     
                     return {
