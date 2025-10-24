@@ -127,7 +127,9 @@ async function startServer() {
         const autoFixDisposals = require('./auto-fix-disposals');
         await autoFixDisposals();
 
-
+        // Auto-fix PC serial numbers (convert empty strings to NULL)
+        const fixPCSerialNumbers = require('./fix-pc-serial-numbers');
+        await fixPCSerialNumbers();
 
         app.use(bodyParser.urlencoded({ extended: false }));
         app.use(bodyParser.json());

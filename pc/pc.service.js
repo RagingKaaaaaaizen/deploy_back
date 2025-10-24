@@ -91,13 +91,20 @@ async function create(params, userId) {
             throw new Error(`Room location with ID ${params.roomLocationId} does not exist. Please refresh the page and select a valid room location.`);
         }
 
-        // Check for duplicate serial number if provided
-        if (params.serialNumber) {
+        // Check for duplicate serial number ONLY if a non-empty serial number is provided
+        // Skip check for null or empty strings to avoid false positives
+        if (params.serialNumber && params.serialNumber.trim() !== '') {
             console.log('🔍 PC Service - Checking for duplicate serial number:', params.serialNumber);
             const existing = await db.PC.findOne({ where: { serialNumber: params.serialNumber } });
             if (existing) {
                 console.error('❌ PC Service - PC with serial number already exists:', params.serialNumber);
                 throw new Error('PC with this serial number already exists');
+            }
+        } else {
+            console.log('🔍 PC Service - No serial number provided (null or empty), skipping duplicate check');
+            // Ensure null is stored instead of empty string for unique constraint compatibility
+            if (params.serialNumber === '' || params.serialNumber === undefined) {
+                params.serialNumber = null;
             }
         }
 
