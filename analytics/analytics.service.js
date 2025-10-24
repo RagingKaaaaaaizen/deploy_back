@@ -524,6 +524,10 @@ async function getItemLifespans(months = 12) {
         // Calculate lifespan for each disposal
         const lifespanData = {};
         
+        console.log('=== LIFESPAN CALCULATION DEBUG ===');
+        console.log('Total disposals found:', disposals.length);
+        console.log('Total stock entries found:', stockEntries.length);
+        
         disposals.forEach(disposal => {
             if (disposal.sourceStockId && stockMap[disposal.sourceStockId]) {
                 const stock = stockMap[disposal.sourceStockId];
@@ -533,6 +537,12 @@ async function getItemLifespans(months = 12) {
                 const stockDate = new Date(stock.createdAt);
                 const disposalDate = new Date(disposal.disposalDate);
                 const lifespanDays = Math.floor((disposalDate - stockDate) / (1000 * 60 * 60 * 24));
+                
+                console.log(`Item: ${itemName}`);
+                console.log(`  Stock Date: ${stockDate.toISOString()}`);
+                console.log(`  Disposal Date: ${disposalDate.toISOString()}`);
+                console.log(`  Lifespan: ${lifespanDays} days`);
+                console.log(`  Quantity: ${disposal.quantity}`);
                 
                 if (lifespanDays >= 0) { // Only include positive lifespans
                     if (!lifespanData[itemName]) {
@@ -550,6 +560,8 @@ async function getItemLifespans(months = 12) {
                         quantity: disposal.quantity
                     });
                 }
+            } else {
+                console.log(`Disposal ${disposal.id} has no sourceStockId or stock not found`);
             }
         });
 
