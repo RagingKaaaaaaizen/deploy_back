@@ -44,11 +44,16 @@ async function create(params, userId) {
         // Validate room location exists
         console.log('🔍 PC Service - Checking room location with ID:', params.roomLocationId);
         const roomLocation = await db.RoomLocation.findByPk(params.roomLocationId);
-        console.log('🔍 PC Service - Room location found:', roomLocation);
+        console.log('🔍 PC Service - Room location query result:', roomLocation);
         
         if (!roomLocation) {
             console.error('❌ PC Service - Room location not found for ID:', params.roomLocationId);
-            throw 'Room location not found';
+            
+            // Get all available room locations to help debug
+            const allLocations = await db.RoomLocation.findAll();
+            console.error('❌ PC Service - Available room locations:', allLocations.map(loc => ({ id: loc.id, name: loc.name })));
+            
+            throw new Error(`Room location with ID ${params.roomLocationId} does not exist. Please refresh the page and select a valid room location.`);
         }
 
         // Check for duplicate serial number if provided
@@ -57,7 +62,7 @@ async function create(params, userId) {
             const existing = await db.PC.findOne({ where: { serialNumber: params.serialNumber } });
             if (existing) {
                 console.error('❌ PC Service - PC with serial number already exists:', params.serialNumber);
-                throw 'PC with this serial number already exists';
+                throw new Error('PC with this serial number already exists');
             }
         }
 
@@ -73,7 +78,15 @@ async function create(params, userId) {
         return result;
     } catch (error) {
         console.error('❌ PC Service - Error in create function:', error);
+        console.error('❌ PC Service - Error name:', error.name);
+        console.error('❌ PC Service - Error message:', error.message);
         console.error('❌ PC Service - Error stack:', error.stack);
+        
+        // If it's a Sequelize foreign key error, provide a better message
+        if (error.name === 'SequelizeForeignKeyConstraintError') {
+            throw new Error(`Invalid room location. The selected location may have been deleted. Please refresh the page and select a valid location.`);
+        }
+        
         throw error;
     }
 }
