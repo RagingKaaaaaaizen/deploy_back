@@ -747,8 +747,8 @@ async function generateReport(request) {
             }
         }
         
-        // Get PC data with simple approach
-        if (includePCs && db.PC) {
+        // Get PC data with simple approach (ALWAYS include PCs; PDF toggles control rendering)
+        if (db.PC) {
             try {
                 console.log('🔍 === FETCHING PC DATA ===');
                 console.log('DB.PC model available:', !!db.PC);
