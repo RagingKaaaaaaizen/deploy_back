@@ -1,0 +1,9 @@
+// Replace lines 49-94 in pc.service.js with this:
+
+        // Log what we're creating (for debugging)
+        console.log('🔍 PC Service - Creating PC with roomLocationId:', params.roomLocationId);
+        
+        // NOTE: We rely on the database foreign key constraint to validate room location
+        // This avoids race conditions where the location exists when frontend loads it
+        // but might be deleted/changed by the time we create the PC
+

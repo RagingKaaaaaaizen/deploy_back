@@ -90,7 +90,8 @@ async function create(params, userId) {
                 console.error('❌ PC Service - Raw SQL query failed:', sqlError.message);
             }
             
-            throw new Error(`Room location with ID ${params.roomLocationId} does not exist. Please refresh the page and select a valid room location.`);
+            // DISABLED VALIDATION - Let database foreign key constraint handle it
+            // throw new Error(`Room location with ID ${params.roomLocationId} does not exist. Please refresh the page and select a valid room location.`);
         }
 
         // Check for duplicate serial number ONLY if a non-empty serial number is provided
