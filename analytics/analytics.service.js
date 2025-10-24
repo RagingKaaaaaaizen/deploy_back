@@ -643,14 +643,19 @@ async function generateReport(request) {
                     });
                 }
                 
-                // Fallback: get current stock prices for items if no source stock
+                // Fallback: get ANY stock prices for items (including deleted stocks)
                 let currentStockPrices = [];
                 if (itemIds.length > 0 && db.Stock) {
                     currentStockPrices = await db.Stock.findAll({
                         where: { itemId: itemIds },
                         attributes: ['itemId', 'price'],
-                        order: [['createdAt', 'DESC']]
+                        order: [['price', 'DESC']] // Get highest price as fallback
                     });
+                    console.log('Found stock prices for', currentStockPrices.length, 'items');
+                    console.log('Sample stock price:', currentStockPrices.length > 0 ? {
+                        itemId: currentStockPrices[0].itemId,
+                        price: currentStockPrices[0].price
+                    } : 'No stock prices found');
                 }
                 
                 reportData.disposals = disposals.map(disposal => {
@@ -662,11 +667,16 @@ async function generateReport(request) {
                     let unitPrice = disposal.disposalValue || 0;
                     let totalValue = disposal.totalValue || 0;
                     
+                    console.log(`Disposal ${disposal.id}: disposalValue=${disposal.disposalValue}, totalValue=${disposal.totalValue}, itemId=${disposal.itemId}, sourceStockId=${disposal.sourceStockId}`);
+                    
                     // If disposalValue is 0, try to get price from source stock
                     if (unitPrice === 0 && disposal.sourceStockId) {
                         const sourceStock = sourceStocks.find(s => s.id === disposal.sourceStockId);
                         if (sourceStock) {
                             unitPrice = sourceStock.price || 0;
+                            console.log(`Found source stock price: ${unitPrice}`);
+                        } else {
+                            console.log('Source stock not found');
                         }
                     }
                     
@@ -675,12 +685,16 @@ async function generateReport(request) {
                         const currentStock = currentStockPrices.find(s => s.itemId === disposal.itemId);
                         if (currentStock) {
                             unitPrice = currentStock.price || 0;
+                            console.log(`Found current stock price: ${unitPrice} for itemId ${disposal.itemId}`);
+                        } else {
+                            console.log(`No stock price found for itemId ${disposal.itemId}`);
                         }
                     }
                     
                     // Calculate total if not in database
                     if (totalValue === 0 && unitPrice > 0) {
                         totalValue = unitPrice * (disposal.quantity || 0);
+                        console.log(`Calculated total: ${totalValue} = ${unitPrice} × ${disposal.quantity}`);
                     }
                     
                     return {
