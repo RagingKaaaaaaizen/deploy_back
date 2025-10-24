@@ -753,17 +753,8 @@ async function generateReport(request) {
                 console.log('🔍 === FETCHING PC DATA ===');
                 console.log('DB.PC model available:', !!db.PC);
                 
-                const pcCount = await db.PC.count();
-                console.log(`Database has ${pcCount} total PCs`);
-                
-                if (pcCount === 0) {
-                    console.log('⚠️  NO PCs found in database - skipping PC report');
-                    reportData.pcs = [];
-                    reportData.summary.totalPCs = 0;
-                    reportData.summary.pcValue = 0;
-                } else {
-                    console.log(`Fetching ${pcCount} PCs with components...`);
-                    const pcs = await db.PC.findAll({
+                console.log('Fetching PCs with components...');
+                const pcs = await db.PC.findAll({
                     attributes: ['id', 'name', 'roomLocationId', 'status', 'totalValue', 'value', 'createdAt', 'updatedAt'],
                     include: [
                         {
@@ -825,7 +816,7 @@ async function generateReport(request) {
                     const mappedComponents = pc.components ? pc.components.map(comp => {
                         const item = componentItems.find(i => i.id === comp.itemId);
                         const stock = componentStocks.find(s => s.itemId === comp.itemId);
-                        const price = stock?.price || 0;
+                        const price = stock?.price != null ? parseFloat(stock.price) : 0;
                         
                         return {
                             id: comp.id,
@@ -845,19 +836,18 @@ async function generateReport(request) {
                         status: pc.status,
                         components: mappedComponents,
                         componentsCount: mappedComponents.length,
-                        totalValue: pc.totalValue || 0,
-                        value: pc.value || 0,
+                        totalValue: pc.totalValue != null ? parseFloat(pc.totalValue) : 0,
+                        value: pc.value != null ? parseFloat(pc.value) : 0,
                         createdAt: pc.createdAt,
                         updatedAt: pc.updatedAt
                     };
                 });
                 
-                    reportData.summary.totalPCs = pcs.length;
-                    reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
-                    
-                    console.log(`✅ Successfully mapped ${reportData.pcs.length} PCs for report`);
-                    console.log(`Total PC Value: PHP ${reportData.summary.pcValue.toFixed(2)}`);
-                }
+                reportData.summary.totalPCs = pcs.length;
+                reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+                
+                console.log(`✅ Successfully mapped ${reportData.pcs.length} PCs for report`);
+                console.log(`Total PC Value: PHP ${reportData.summary.pcValue.toFixed(2)}`);
                 
             } catch (error) {
                 console.error('❌ Error fetching PCs:', error);
