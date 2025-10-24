@@ -727,8 +727,20 @@ async function generateReport(request) {
         // Get PC data with simple approach
         if (includePCs && db.PC) {
             try {
-                console.log('Fetching PC data...');
-                const pcs = await db.PC.findAll({
+                console.log('🔍 === FETCHING PC DATA ===');
+                console.log('DB.PC model available:', !!db.PC);
+                
+                const pcCount = await db.PC.count();
+                console.log(`Database has ${pcCount} total PCs`);
+                
+                if (pcCount === 0) {
+                    console.log('⚠️  NO PCs found in database - skipping PC report');
+                    reportData.pcs = [];
+                    reportData.summary.totalPCs = 0;
+                    reportData.summary.pcValue = 0;
+                } else {
+                    console.log(`Fetching ${pcCount} PCs with components...`);
+                    const pcs = await db.PC.findAll({
                     attributes: ['id', 'name', 'roomLocationId', 'status', 'totalValue', 'value', 'createdAt', 'updatedAt'],
                     include: [
                         {
@@ -817,13 +829,25 @@ async function generateReport(request) {
                     };
                 });
                 
-                reportData.summary.totalPCs = pcs.length;
-                reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+                    reportData.summary.totalPCs = pcs.length;
+                    reportData.summary.pcValue = pcs.reduce((sum, pc) => sum + (pc.totalValue || pc.value || 0), 0);
+                    
+                    console.log(`✅ Successfully mapped ${reportData.pcs.length} PCs for report`);
+                    console.log(`Total PC Value: PHP ${reportData.summary.pcValue.toFixed(2)}`);
+                }
                 
             } catch (error) {
-                console.error('Error fetching PCs:', error);
+                console.error('❌ Error fetching PCs:', error);
+                console.error('Error details:', error.message);
+                console.error('Stack trace:', error.stack);
                 reportData.pcs = [];
+                reportData.summary.totalPCs = 0;
+                reportData.summary.pcValue = 0;
             }
+        } else {
+            console.log('ℹ️  PC data not requested or PC model not available');
+            console.log('includePCs:', includePCs);
+            console.log('db.PC available:', !!db.PC);
         }
         
         // Calculate total value
