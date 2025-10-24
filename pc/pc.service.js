@@ -49,8 +49,15 @@ async function create(params, userId) {
         // Validate room location exists
         console.log('🔍 PC Service - Checking room location with ID:', params.roomLocationId);
         
-        // Try to query with detailed logging
-        const roomLocation = await db.RoomLocation.findByPk(params.roomLocationId);
+        // First, get all locations to see what's in the database
+        const allLocations = await db.RoomLocation.findAll({ raw: true });
+        console.log('🔍 PC Service - ALL room locations in database:', allLocations);
+        
+        // Try to query with detailed logging - use reload: true to bypass cache
+        const roomLocation = await db.RoomLocation.findOne({
+            where: { id: params.roomLocationId },
+            rejectOnEmpty: false
+        });
         console.log('🔍 PC Service - Room location query result:', roomLocation ? {
             id: roomLocation.id,
             name: roomLocation.name,
@@ -59,9 +66,6 @@ async function create(params, userId) {
         
         if (!roomLocation) {
             console.error('❌ PC Service - Room location not found for ID:', params.roomLocationId);
-            
-            // Get all available room locations to help debug
-            const allLocations = await db.RoomLocation.findAll();
             console.error('❌ PC Service - Total room locations in database:', allLocations.length);
             console.error('❌ PC Service - Available room locations:', allLocations.map(loc => ({ 
                 id: loc.id, 
@@ -69,9 +73,20 @@ async function create(params, userId) {
                 name: loc.name 
             })));
             
-            // Check table name
+            // Check table names
             console.error('❌ PC Service - RoomLocation table name:', db.RoomLocation.getTableName());
             console.error('❌ PC Service - PC table name:', db.PC.getTableName());
+            
+            // Try a raw SQL query to double-check
+            try {
+                const [rawResults] = await db.sequelize.query(
+                    'SELECT * FROM roomLocations WHERE id = ?',
+                    { replacements: [params.roomLocationId] }
+                );
+                console.error('❌ PC Service - Raw SQL query result:', rawResults);
+            } catch (sqlError) {
+                console.error('❌ PC Service - Raw SQL query failed:', sqlError.message);
+            }
             
             throw new Error(`Room location with ID ${params.roomLocationId} does not exist. Please refresh the page and select a valid room location.`);
         }
