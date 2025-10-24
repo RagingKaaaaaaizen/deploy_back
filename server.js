@@ -122,6 +122,10 @@ async function startServer() {
         
         // Ensure uploads directory exists
         ensureUploadsDirectory();
+        
+        // Auto-fix disposal values (run once to fix old records)
+        const autoFixDisposals = require('./auto-fix-disposals');
+        await autoFixDisposals();
 
 
 
