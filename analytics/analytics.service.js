@@ -630,6 +630,10 @@ async function generateReport(request) {
                     const location = locations.find(l => l.id === disposal.locationId);
                     const user = users.find(u => u.id === disposal.createdBy);
                     
+                    // Calculate unit price and total value
+                    const unitPrice = disposal.disposalValue || 0;
+                    const totalValue = (disposal.disposalValue || 0) * (disposal.quantity || 0);
+                    
                     return {
                         id: disposal.id,
                         itemName: item?.name || 'Unknown Item',
@@ -637,8 +641,9 @@ async function generateReport(request) {
                         brandName: item?.brand?.name || 'Unknown Brand',
                         quantity: disposal.quantity,
                         locationName: location?.name || 'Unknown Location',
+                        price: unitPrice, // Add unit price field
                         disposalValue: disposal.disposalValue,
-                        totalValue: disposal.disposalValue,
+                        totalValue: totalValue, // Calculate total value
                         reason: disposal.reason,
                         disposalDate: disposal.disposalDate,
                         disposedByName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
