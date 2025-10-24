@@ -48,10 +48,12 @@ async function create(params, userId) {
         
         // Validate room location exists
         console.log('🔍 PC Service - Checking room location with ID:', params.roomLocationId);
+        console.log('🔍 PC Service - roomLocationId TYPE:', typeof params.roomLocationId);
+        console.log('🔍 PC Service - roomLocationId VALUE:', JSON.stringify(params.roomLocationId));
         
         // First, get all locations to see what's in the database
         const allLocations = await db.RoomLocation.findAll({ raw: true });
-        console.log('🔍 PC Service - ALL room locations in database:', allLocations);
+        console.log('🔍 PC Service - ALL room locations in database:', JSON.stringify(allLocations, null, 2));
         
         // Try to query with detailed logging - use reload: true to bypass cache
         const roomLocation = await db.RoomLocation.findOne({
