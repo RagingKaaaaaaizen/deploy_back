@@ -31,12 +31,12 @@ function createSchema(req, res, next) {
 
 function updateSchema(req, res, next) {
     const schema = Joi.object({
-        name: Joi.string().empty(''),
-        serialNumber: Joi.string().allow(''),
-        roomLocationId: Joi.number().empty(''),
-        status: Joi.string().valid('Active', 'Inactive', 'Maintenance', 'Retired').empty(''),
-        assignedTo: Joi.string().allow(''),
-        notes: Joi.string().allow('')
+        name: Joi.string().empty('').optional(),
+        serialNumber: Joi.string().allow('', null).optional(),
+        roomLocationId: Joi.number().empty('').optional(),
+        status: Joi.string().valid('Active', 'Inactive', 'Maintenance', 'Retired').empty('').optional(),
+        assignedTo: Joi.string().allow('', null).optional(),
+        notes: Joi.string().allow('', null).optional()
     });
     validateRequest(req, next, schema);
 }
