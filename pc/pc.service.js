@@ -39,19 +39,39 @@ async function getById(id) {
 async function create(params, userId) {
     try {
         console.log('🔍 PC Service - create called with params:', params);
+        console.log('🔍 PC Service - params types:', {
+            roomLocationId: typeof params.roomLocationId,
+            name: typeof params.name,
+            status: typeof params.status
+        });
         console.log('🔍 PC Service - userId:', userId);
         
         // Validate room location exists
         console.log('🔍 PC Service - Checking room location with ID:', params.roomLocationId);
+        
+        // Try to query with detailed logging
         const roomLocation = await db.RoomLocation.findByPk(params.roomLocationId);
-        console.log('🔍 PC Service - Room location query result:', roomLocation);
+        console.log('🔍 PC Service - Room location query result:', roomLocation ? {
+            id: roomLocation.id,
+            name: roomLocation.name,
+            dataValues: roomLocation.dataValues
+        } : null);
         
         if (!roomLocation) {
             console.error('❌ PC Service - Room location not found for ID:', params.roomLocationId);
             
             // Get all available room locations to help debug
             const allLocations = await db.RoomLocation.findAll();
-            console.error('❌ PC Service - Available room locations:', allLocations.map(loc => ({ id: loc.id, name: loc.name })));
+            console.error('❌ PC Service - Total room locations in database:', allLocations.length);
+            console.error('❌ PC Service - Available room locations:', allLocations.map(loc => ({ 
+                id: loc.id, 
+                idType: typeof loc.id,
+                name: loc.name 
+            })));
+            
+            // Check table name
+            console.error('❌ PC Service - RoomLocation table name:', db.RoomLocation.getTableName());
+            console.error('❌ PC Service - PC table name:', db.PC.getTableName());
             
             throw new Error(`Room location with ID ${params.roomLocationId} does not exist. Please refresh the page and select a valid room location.`);
         }
