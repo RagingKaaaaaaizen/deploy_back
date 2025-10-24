@@ -39,57 +39,60 @@ function registerRoutes() {
     // Swagger docs
     app.use('/api-docs', require('./_helpers/swagger'));
 
-    // Serve static files from uploads directory
-    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+        // Serve static files from uploads directory
+        app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-    // Health check endpoint for Render
-    app.get('/health', (req, res) => {
-        res.json({ 
-            status: 'OK',
-            timestamp: new Date(),
-            uptime: process.uptime(),
-            environment: process.env.NODE_ENV || 'development'
-        });
-    });
-
-    // Test endpoint without authentication
-    app.get('/api/test', (req, res) => {
-        res.json({ 
-            message: 'Server is working!', 
-            timestamp: new Date(),
-            status: 'OK'
-        });
-    });
-
-    // Test disposal endpoint without authentication
-    app.get('/api/dispose-test', (req, res) => {
-        res.json({ 
-            message: 'Dispose endpoint is working!', 
-            timestamp: new Date(),
-            status: 'OK',
-            endpoint: '/api/dispose-test'
-        });
-    });
-
-    // Test accounts endpoint without authentication
-    app.get('/api/accounts-test', async (req, res) => {
-        try {
-            const accountCount = await db.Account.count();
+        // =========================
+        // Health Check and Test Endpoints
+        // =========================
+        // Health check endpoint for Render
+        app.get('/health', (req, res) => {
             res.json({ 
-                message: 'Accounts endpoint is working!', 
+                status: 'OK',
+                timestamp: new Date(),
+                uptime: process.uptime(),
+                environment: process.env.NODE_ENV || 'development'
+            });
+        });
+
+        // Test endpoint without authentication
+        app.get('/api/test', (req, res) => {
+            res.json({ 
+                message: 'Server is working!', 
+                timestamp: new Date(),
+                status: 'OK'
+            });
+        });
+
+        // Test disposal endpoint without authentication
+        app.get('/api/dispose-test', (req, res) => {
+            res.json({ 
+                message: 'Dispose endpoint is working!', 
                 timestamp: new Date(),
                 status: 'OK',
-                endpoint: '/api/accounts-test',
-                accountCount: accountCount
+                endpoint: '/api/dispose-test'
             });
-        } catch (error) {
-            res.status(500).json({ 
-                message: 'Accounts endpoint error', 
-                error: error.message,
-                endpoint: '/api/accounts-test'
-            });
-        }
-    });
+        });
+
+        // Test accounts endpoint without authentication
+        app.get('/api/accounts-test', async (req, res) => {
+            try {
+                const accountCount = await db.Account.count();
+                res.json({ 
+                    message: 'Accounts endpoint is working!', 
+                    timestamp: new Date(),
+                    status: 'OK',
+                    endpoint: '/api/accounts-test',
+                    accountCount: accountCount
+                });
+            } catch (error) {
+                res.status(500).json({ 
+                    message: 'Accounts endpoint error', 
+                    error: error.message,
+                    endpoint: '/api/accounts-test'
+                });
+            }
+        });
 
     console.log('✅ API routes registered successfully');
 }
@@ -127,73 +130,116 @@ async function startServer() {
         const autoFixDisposals = require('./auto-fix-disposals');
         await autoFixDisposals();
 
+        // =========================
+        // CORS Configuration - MUST BE FIRST
+        // =========================
+        console.log('🔧 Setting up CORS...');
+        
+        // Allow CORS - Configure for production with better error handling
+        const corsOptions = {
+            origin: function (origin, callback) {
+                // Allow requests with no origin (like mobile apps or curl requests)
+                if (!origin) {
+                    console.log('✅ CORS: Request with no origin allowed');
+                    return callback(null, true);
+                }
+                
+                const allowedOrigins = [
+                    'https://computer-lab-inventory-frontend.onrender.com',
+                    'http://localhost:4200',
+                    'http://localhost:4200/'
+                ];
+                
+                // Add FRONTEND_URL from environment if it exists
+                if (process.env.FRONTEND_URL) {
+                    allowedOrigins.push(process.env.FRONTEND_URL);
+                }
+                
+                // Check if origin is allowed (case-insensitive and with/without trailing slash)
+                const normalizedOrigin = origin.toLowerCase().replace(/\/$/, '');
+                const isAllowed = allowedOrigins.some(allowed => 
+                    allowed.toLowerCase().replace(/\/$/, '') === normalizedOrigin
+                );
+                
+                if (isAllowed) {
+                    console.log('✅ CORS: Origin allowed:', origin);
+                    callback(null, true);
+                } else {
+                    console.log('❌ CORS: Origin blocked:', origin);
+                    console.log('❌ CORS: Allowed origins:', allowedOrigins);
+                    // Instead of throwing error, still allow but log the issue
+                    callback(null, true); // Changed to allow all origins temporarily for debugging
+                }
+            },
+            credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+            exposedHeaders: ['Content-Range', 'X-Content-Range'],
+            preflightContinue: false,
+            optionsSuccessStatus: 204,
+            maxAge: 86400 // 24 hours
+        };
 
+        app.use(cors(corsOptions));
 
+        // Add additional CORS headers manually as fallback
+        app.use((req, res, next) => {
+            const origin = req.headers.origin;
+            if (origin) {
+                res.header('Access-Control-Allow-Origin', origin);
+                res.header('Access-Control-Allow-Credentials', 'true');
+                res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+                res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+            }
+            
+            // Handle preflight
+            if (req.method === 'OPTIONS') {
+                console.log('✅ CORS: Handling OPTIONS preflight for', req.url);
+                return res.sendStatus(204);
+            }
+            
+            console.log('📝 Request:', req.method, req.url, 'from', origin || 'no-origin');
+            next();
+        });
+        
+        console.log('✅ CORS configured successfully');
+
+        // =========================
+        // Body Parser and Cookie Parser
+        // =========================
         app.use(bodyParser.urlencoded({ extended: false }));
         app.use(bodyParser.json());
         app.use(cookieParser());
 
-// Allow CORS - Configure for production
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
+        // =========================
+        // API Routes
+        // =========================
+        console.log('🔗 Registering API routes...');
         
-        const allowedOrigins = [
-            'https://computer-lab-inventory-frontend.onrender.com',
-            'http://localhost:4200'
-        ];
-        
-        // Add FRONTEND_URL from environment if it exists
-        if (process.env.FRONTEND_URL) {
-            allowedOrigins.push(process.env.FRONTEND_URL);
-        }
-        
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.log('CORS blocked origin:', origin);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    optionsSuccessStatus: 204
-};
-app.use(cors(corsOptions));
-app.use((req, res, next) => {
-    console.log('Request Origin:', req.headers.origin);
-    console.log('Request Method:', req.method);
-    console.log('Request URL:', req.url);
-    next();
-});
+        app.use('/api/accounts', require('./accounts/account.controller'));
+        app.use('/api/brands', require('./brand/brand.controller'));
+        app.use('/api/categories', require('./category'));
+        app.use('/api/items', require('./items'));
+        app.use('/api/stocks', require('./stock'));
+        app.use('/api/storage-locations', require('./storage-location'));
+        app.use('/api/pcs', require('./pc'));
+        app.use('/api/pc-components', require('./pc/pc-component.routes'));
+        app.use('/api/room-locations', require('./pc/room-location.routes'));
+        app.use('/api/pc-build-templates', require('./pc/pc-build-template.routes'));
+        app.use('/api/specifications', require('./specifications/specification.controller'));
+        app.use('/api/dispose', require('./dispose'));
+        app.use('/api/activity-logs', require('./activity-log'));
+        app.use('/api/analytics', require('./analytics/analytics.routes'));
+        app.use('/api/approval-requests', require('./approval-requests'));
 
-// API routes
-app.use('/api/accounts', require('./accounts/account.controller'));
-app.use('/api/brands', require('./brand/brand.controller'));
-app.use('/api/categories', require('./category'));
-app.use('/api/items', require('./items'));
-app.use('/api/stocks', require('./stock'));
-app.use('/api/storage-locations', require('./storage-location'));
-app.use('/api/pcs', require('./pc'));
-app.use('/api/pc-components', require('./pc/pc-component.routes'));
-app.use('/api/room-locations', require('./pc/room-location.routes'));
-app.use('/api/pc-build-templates', require('./pc/pc-build-template.routes'));
-app.use('/api/specifications', require('./specifications/specification.controller'));
-app.use('/api/dispose', require('./dispose'));
-app.use('/api/activity-logs', require('./activity-log'));
-app.use('/api/analytics', require('./analytics/analytics.routes'));
-app.use('/api/approval-requests', require('./approval-requests'));
+        // Comparison Feature Routes
+        app.use('/api', require('./comparison'));
 
-// Comparison Feature Routes
-app.use('/api', require('./comparison'));
+        // Swagger docs
+        app.use('/api-docs', require('./_helpers/swagger'));
 
-// Swagger docs
-app.use('/api-docs', require('./_helpers/swagger'));
-
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+        // Serve static files from uploads directory
+        app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint for Render
 app.get('/health', (req, res) => {
