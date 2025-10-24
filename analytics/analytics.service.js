@@ -587,18 +587,28 @@ async function generateReport(request) {
             try {
                 console.log('Fetching disposals data...');
                 const disposals = await db.Dispose.findAll({
-                    attributes: ['id', 'itemId', 'quantity', 'locationId', 'disposalValue', 'totalValue', 'reason', 'disposalDate', 'createdBy', 'createdAt'],
+                    attributes: ['id', 'itemId', 'quantity', 'locationId', 'disposalValue', 'totalValue', 'reason', 'disposalDate', 'createdBy', 'createdAt', 'sourceStockId'],
                     order: [['disposalDate', 'DESC']]
                 });
+                
+                console.log('Disposal data sample:', disposals.length > 0 ? {
+                    id: disposals[0].id,
+                    quantity: disposals[0].quantity,
+                    disposalValue: disposals[0].disposalValue,
+                    totalValue: disposals[0].totalValue,
+                    sourceStockId: disposals[0].sourceStockId
+                } : 'No disposals');
                 
                 // Get related data separately
                 const itemIds = [...new Set(disposals.map(d => d.itemId))];
                 const locationIds = [...new Set(disposals.map(d => d.locationId))];
                 const userIds = [...new Set(disposals.map(d => d.createdBy))];
+                const sourceStockIds = [...new Set(disposals.map(d => d.sourceStockId).filter(id => id))];
                 
                 let items = [];
                 let locations = [];
                 let users = [];
+                let sourceStocks = [];
                 
                 if (itemIds.length > 0 && db.Item) {
                     items = await db.Item.findAll({
@@ -625,16 +635,53 @@ async function generateReport(request) {
                     });
                 }
                 
+                // Fetch source stock entries to get prices for disposals with 0 value
+                if (sourceStockIds.length > 0 && db.Stock) {
+                    sourceStocks = await db.Stock.findAll({
+                        where: { id: sourceStockIds },
+                        attributes: ['id', 'itemId', 'price']
+                    });
+                }
+                
+                // Fallback: get current stock prices for items if no source stock
+                let currentStockPrices = [];
+                if (itemIds.length > 0 && db.Stock) {
+                    currentStockPrices = await db.Stock.findAll({
+                        where: { itemId: itemIds },
+                        attributes: ['itemId', 'price'],
+                        order: [['createdAt', 'DESC']]
+                    });
+                }
+                
                 reportData.disposals = disposals.map(disposal => {
                     const item = items.find(i => i.id === disposal.itemId);
                     const location = locations.find(l => l.id === disposal.locationId);
                     const user = users.find(u => u.id === disposal.createdBy);
                     
-                    // Use database totalValue, fallback to calculation if not available
-                    const dbTotalValue = disposal.totalValue || 0;
-                    const unitPrice = disposal.disposalValue || 0;
-                    const calculatedTotal = unitPrice * (disposal.quantity || 0);
-                    const finalTotalValue = dbTotalValue || calculatedTotal;
+                    // Get price from multiple sources (for old records with 0 values)
+                    let unitPrice = disposal.disposalValue || 0;
+                    let totalValue = disposal.totalValue || 0;
+                    
+                    // If disposalValue is 0, try to get price from source stock
+                    if (unitPrice === 0 && disposal.sourceStockId) {
+                        const sourceStock = sourceStocks.find(s => s.id === disposal.sourceStockId);
+                        if (sourceStock) {
+                            unitPrice = sourceStock.price || 0;
+                        }
+                    }
+                    
+                    // If still 0, try to get current stock price for this item
+                    if (unitPrice === 0 && disposal.itemId) {
+                        const currentStock = currentStockPrices.find(s => s.itemId === disposal.itemId);
+                        if (currentStock) {
+                            unitPrice = currentStock.price || 0;
+                        }
+                    }
+                    
+                    // Calculate total if not in database
+                    if (totalValue === 0 && unitPrice > 0) {
+                        totalValue = unitPrice * (disposal.quantity || 0);
+                    }
                     
                     return {
                         id: disposal.id,
@@ -643,9 +690,9 @@ async function generateReport(request) {
                         brandName: item?.brand?.name || 'Unknown Brand',
                         quantity: disposal.quantity,
                         locationName: location?.name || 'Unknown Location',
-                        price: unitPrice, // Unit price from disposalValue
-                        disposalValue: disposal.disposalValue,
-                        totalValue: finalTotalValue, // Use database totalValue or calculate
+                        price: unitPrice, // Unit price (from disposal, source stock, or current stock)
+                        disposalValue: unitPrice, // Set to calculated unit price
+                        totalValue: totalValue, // Use database or calculated total
                         reason: disposal.reason,
                         disposalDate: disposal.disposalDate,
                         disposedByName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
@@ -653,8 +700,9 @@ async function generateReport(request) {
                     };
                 });
                 
-                reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
-                reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
+                // Calculate summary from mapped disposal data (with calculated values)
+                reportData.summary.totalDisposals = reportData.disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
+                reportData.summary.disposalValue = reportData.disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
                 
             } catch (error) {
                 console.error('Error fetching disposals:', error);
