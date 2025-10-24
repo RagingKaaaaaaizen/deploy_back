@@ -12,7 +12,8 @@ module.exports = {
     getDisposalWithStock,
     getStockWithDisposal,
     returnToStock,
-    returnToStockPartial
+    returnToStockPartial,
+    fixDisposalValues
 };
 
 // Get all disposal records with complete information
@@ -653,6 +654,119 @@ async function returnToStockPartial(disposalId, quantity, remarks, userId) {
         
     } catch (error) {
         console.error('Error in partial return to stock:', error);
+        throw error;
+    }
+}
+
+// Fix disposal values for old records
+async function fixDisposalValues() {
+    console.log('=== FIXING DISPOSAL VALUES ===');
+    
+    try {
+        // Get all disposals with 0 values
+        const disposals = await db.Dispose.findAll({
+            where: {
+                disposalValue: 0
+            },
+            include: [
+                {
+                    model: db.Item,
+                    as: 'item',
+                    attributes: ['id', 'name']
+                }
+            ]
+        });
+        
+        console.log(`Found ${disposals.length} disposal records with 0 value`);
+        
+        if (disposals.length === 0) {
+            return {
+                success: true,
+                message: 'No disposal records need fixing!',
+                fixed: 0,
+                failed: 0,
+                total: 0
+            };
+        }
+        
+        let fixedCount = 0;
+        let failedCount = 0;
+        const details = [];
+        
+        for (const disposal of disposals) {
+            console.log(`\nProcessing Disposal ID: ${disposal.id}`);
+            
+            let unitPrice = 0;
+            
+            // Strategy 1: Try to get price from source stock
+            if (disposal.sourceStockId) {
+                const sourceStock = await db.Stock.findByPk(disposal.sourceStockId);
+                if (sourceStock && sourceStock.price > 0) {
+                    unitPrice = parseFloat(sourceStock.price);
+                    console.log(`Found price from source stock: ${unitPrice}`);
+                }
+            }
+            
+            // Strategy 2: If no source stock price, get latest stock price for this item
+            if (unitPrice === 0 && disposal.itemId) {
+                const latestStock = await db.Stock.findOne({
+                    where: { 
+                        itemId: disposal.itemId,
+                        price: { [db.Sequelize.Op.gt]: 0 }
+                    },
+                    order: [['createdAt', 'DESC']],
+                    limit: 1
+                });
+                
+                if (latestStock && latestStock.price > 0) {
+                    unitPrice = parseFloat(latestStock.price);
+                    console.log(`Found price from latest stock: ${unitPrice}`);
+                }
+            }
+            
+            // Update disposal record
+            if (unitPrice > 0) {
+                const newTotalValue = unitPrice * disposal.quantity;
+                
+                await disposal.update({
+                    disposalValue: unitPrice,
+                    totalValue: newTotalValue
+                });
+                
+                console.log(`FIXED: disposalValue=${unitPrice}, totalValue=${newTotalValue}`);
+                fixedCount++;
+                details.push({
+                    id: disposal.id,
+                    itemName: disposal.item ? disposal.item.name : 'Unknown',
+                    quantity: disposal.quantity,
+                    price: unitPrice,
+                    total: newTotalValue,
+                    status: 'fixed'
+                });
+            } else {
+                console.log(`FAILED: No price found for this disposal`);
+                failedCount++;
+                details.push({
+                    id: disposal.id,
+                    itemName: disposal.item ? disposal.item.name : 'Unknown',
+                    quantity: disposal.quantity,
+                    status: 'failed',
+                    reason: 'No price found'
+                });
+            }
+        }
+        
+        return {
+            success: true,
+            message: `Fixed ${fixedCount} disposal records. Failed: ${failedCount}`,
+            fixed: fixedCount,
+            failed: failedCount,
+            total: disposals.length,
+            details: details
+        };
+        
+    } catch (error) {
+        console.error('Error fixing disposal values:', error);
         throw error;
     }
 } 

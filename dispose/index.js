@@ -41,6 +41,8 @@ router.get('/stock-with-disposal/:itemId', authorize([Role.SuperAdmin, Role.Admi
 // Temporarily remove authentication for testing
 router.post('/:id/return-to-stock', controller.returnToStock);
 router.post('/:id/return-to-stock-partial', controller.returnToStockPartial);
+// Admin-only endpoint to fix disposal values
+router.post('/fix-disposal-values', authorize([Role.SuperAdmin, Role.Admin]), controller.fixDisposalValues);
 // Test endpoint without authentication
 router.get('/test', controller.test);
 

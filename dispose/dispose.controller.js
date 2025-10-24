@@ -233,6 +233,20 @@ exports.returnToStockPartial = (req, res, next) => {
     }
 };
 
+// Admin endpoint to fix disposal values
+exports.fixDisposalValues = async (req, res, next) => {
+    console.log('=== FIX DISPOSAL VALUES ENDPOINT ===');
+    console.log('User:', req.user);
+    
+    try {
+        const result = await disposeService.fixDisposalValues();
+        res.send(result);
+    } catch (error) {
+        console.error('Error fixing disposal values:', error);
+        res.status(500).send({ message: error.message || 'Error fixing disposal values' });
+    }
+};
+
 // Test endpoint to check if backend is working
 exports.test = (req, res, next) => {
     console.log('=== TEST ENDPOINT CALLED ===');
