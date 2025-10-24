@@ -587,7 +587,7 @@ async function generateReport(request) {
             try {
                 console.log('Fetching disposals data...');
                 const disposals = await db.Dispose.findAll({
-                    attributes: ['id', 'itemId', 'quantity', 'locationId', 'disposalValue', 'reason', 'disposalDate', 'createdBy', 'createdAt'],
+                    attributes: ['id', 'itemId', 'quantity', 'locationId', 'disposalValue', 'totalValue', 'reason', 'disposalDate', 'createdBy', 'createdAt'],
                     order: [['disposalDate', 'DESC']]
                 });
                 
@@ -630,9 +630,11 @@ async function generateReport(request) {
                     const location = locations.find(l => l.id === disposal.locationId);
                     const user = users.find(u => u.id === disposal.createdBy);
                     
-                    // Calculate unit price and total value
+                    // Use database totalValue, fallback to calculation if not available
+                    const dbTotalValue = disposal.totalValue || 0;
                     const unitPrice = disposal.disposalValue || 0;
-                    const totalValue = (disposal.disposalValue || 0) * (disposal.quantity || 0);
+                    const calculatedTotal = unitPrice * (disposal.quantity || 0);
+                    const finalTotalValue = dbTotalValue || calculatedTotal;
                     
                     return {
                         id: disposal.id,
@@ -641,9 +643,9 @@ async function generateReport(request) {
                         brandName: item?.brand?.name || 'Unknown Brand',
                         quantity: disposal.quantity,
                         locationName: location?.name || 'Unknown Location',
-                        price: unitPrice, // Add unit price field
+                        price: unitPrice, // Unit price from disposalValue
                         disposalValue: disposal.disposalValue,
-                        totalValue: totalValue, // Calculate total value
+                        totalValue: finalTotalValue, // Use database totalValue or calculate
                         reason: disposal.reason,
                         disposalDate: disposal.disposalDate,
                         disposedByName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
@@ -652,7 +654,7 @@ async function generateReport(request) {
                 });
                 
                 reportData.summary.totalDisposals = disposals.reduce((sum, disposal) => sum + disposal.quantity, 0);
-                reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.disposalValue || 0), 0);
+                reportData.summary.disposalValue = disposals.reduce((sum, disposal) => sum + (disposal.totalValue || 0), 0);
                 
             } catch (error) {
                 console.error('Error fetching disposals:', error);
